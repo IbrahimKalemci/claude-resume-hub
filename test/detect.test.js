@@ -55,15 +55,25 @@ test("normal successful output -> not a limit", () => {
   assert.equal(r.hit, false);
 });
 
-test("parseClockTime: past same-day time within 15m -> resume now-ish", () => {
-  // Build a string with a time 5 minutes ago
-  const past = new Date(Date.now() - 5 * 60 * 1000);
-  let h = past.getHours(); const m = past.getMinutes();
-  const ap = h >= 12 ? "pm" : "am"; let h12 = h % 12; if (h12 === 0) h12 = 12;
-  const s = `resets ${h12}:${String(m).padStart(2, "0")}${ap}`;
-  const t = parseClockTime(s);
-  // should be ~now (not +1 day)
-  assert.ok(Math.abs(t - new Date()) < 16 * 60 * 1000);
+test("parseClockTime: a reset time just barely past -> resume now (deterministic clock)", () => {
+  const now = new Date("2026-07-18T15:00:00"); // 3:00pm local
+  const t = parseClockTime("resets 2:57pm", now); // 3 min ago, within 15m window
+  assert.equal(t.getTime(), now.getTime());
+});
+
+test("parseClockTime: a future time today is kept as-is", () => {
+  const now = new Date("2026-07-18T15:00:00");
+  const t = parseClockTime("resets 5:30pm", now); // 17:30 today
+  assert.equal(t.getHours(), 17);
+  assert.equal(t.getMinutes(), 30);
+  assert.equal(t.getDate(), 18);
+});
+
+test("parseClockTime: a time well in the past rolls to tomorrow", () => {
+  const now = new Date("2026-07-18T15:00:00");
+  const t = parseClockTime("resets 9:00am", now); // 6h ago -> tomorrow 9am
+  assert.equal(t.getDate(), 19);
+  assert.equal(t.getHours(), 9);
 });
 
 test("fmtDuration formats nicely", () => {

@@ -71,8 +71,9 @@ USAGE
 
 OPTIONS
   -p, --prompt <text>     Message sent to continue after a reset (default: "continue")
-  -t, --task <text>       Initial task; starts a fresh session on the first run,
-                          then continues it. Omit to attach to the most recent session.
+  -t, --task <text>       Start a NEW session with this task (NOT for resuming an
+                          existing one). To continue your stopped session, omit -t
+                          and use plain run / --smart / --session instead.
   -s, --session <id>      Resume a specific session id (instead of the most recent).
                           Find ids by running: claude --resume
   -d, --dir <path>        Working directory / project (default: current dir)
@@ -132,6 +133,12 @@ async function main() {
   if (opts.list) {
     printSessions(opts.dir);
     process.exit(0);
+  }
+
+  // --task starts a fresh session; warn so people don't use it expecting a resume.
+  if (opts.task) {
+    console.log(`${C.yellow}[auto-resume] Note: --task starts a NEW session with this task — it does NOT resume an existing one.${C.reset}`);
+    console.log(`${C.dim}   To continue your existing (stopped) session instead, run without -t:  claude-resume-hub --smart   (or pick one with --list / --session)${C.reset}`);
   }
 
   // --smart: build a context-aware resume prompt from the session's last step.

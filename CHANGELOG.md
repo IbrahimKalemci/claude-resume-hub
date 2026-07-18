@@ -3,6 +3,13 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.1] — 2026-07-18
+
+### Changed
+- Clearer `--task` behavior: it starts a **new** session, and the CLI now prints
+  a note saying so (with the resume alternatives), after real users hit it
+  expecting `-t` to continue an existing session. Sharpened the `--help` wording.
+
 ## [1.3.0] — 2026-07-18
 
 ### Added
