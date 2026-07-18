@@ -1,0 +1,44 @@
+{
+  "name": "claude-resume-hub",
+  "version": "1.0.0",
+  "description": "Run Claude Code and auto-continue the moment a usage/session limit resets — with a live dashboard and desktop alerts. Cross-platform, zero-dependency.",
+  "bin": {
+    "claude-resume-hub": "bin/cli.js",
+    "crh": "bin/cli.js"
+  },
+  "type": "commonjs",
+  "engines": {
+    "node": ">=16"
+  },
+  "files": [
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "start": "node bin/cli.js",
+    "test": "node --test"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "anthropic",
+    "cli",
+    "rate-limit",
+    "usage-limit",
+    "session-limit",
+    "auto-resume",
+    "automation",
+    "continue"
+  ],
+  "author": "Ibrahim Kalemci",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/IbrahimKalemci/claude-auto-resume.git"
+  },
+  "bugs": {
+    "url": "https://github.com/IbrahimKalemci/claude-auto-resume/issues"
+  },
+  "homepage": "https://github.com/IbrahimKalemci/claude-auto-resume#readme"
+}

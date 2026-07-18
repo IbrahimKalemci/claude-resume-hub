@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 452" width="640" height="452" font-family="ui-sans-serif,system-ui,Segoe UI,Roboto,sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#16203a"/><stop offset="0.55" stop-color="#0b0e14"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#131826"/><stop offset="1" stop-color="#0f1420"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="640" height="452" fill="url(#bg)"/>
+
+  <!-- header -->
+  <circle cx="30" cy="30" r="5" fill="#c96442"/>
+  <text x="44" y="35" fill="#e6e9f0" font-size="15" font-weight="700">claude-resume-hub</text>
+  <rect x="470" y="19" width="66" height="24" rx="12" fill="none" stroke="#d29922"/>
+  <text x="503" y="35" fill="#d29922" font-size="12" font-weight="600" text-anchor="middle">waiting</text>
+  <rect x="544" y="19" width="72" height="24" rx="7" fill="none" stroke="#232a3d"/>
+  <text x="580" y="35" fill="#8b93a7" font-size="11.5" font-weight="600" text-anchor="middle">Enable alerts</text>
+
+  <!-- card -->
+  <rect x="24" y="60" width="592" height="182" rx="18" fill="url(#card)" stroke="#232a3d"/>
+  <text x="320" y="98" fill="#8b93a7" font-size="12" letter-spacing="2" text-anchor="middle">RESUMING IN</text>
+  <text x="320" y="158" fill="#e6e9f0" font-size="60" font-weight="800" text-anchor="middle"
+        font-family="ui-monospace,SFMono-Regular,Menlo,monospace">00:04:42</text>
+  <text x="320" y="190" fill="#8b93a7" font-size="13" text-anchor="middle">Limit hit — resuming at 15:12:31</text>
+  <text x="320" y="222" font-size="13" text-anchor="middle">
+    <tspan fill="#8b93a7">Cycle </tspan><tspan fill="#e6e9f0" font-weight="600">1 / 100</tspan>
+    <tspan fill="#8b93a7">      Resets at </tspan><tspan fill="#e6e9f0" font-weight="600">15:12:28</tspan>
+  </text>
+
+  <!-- log header -->
+  <text x="28" y="272" fill="#8b93a7" font-size="12" letter-spacing="1.2">LIVE LOG</text>
+  <text x="612" y="272" fill="#8b93a7" font-size="12" text-anchor="end">clear</text>
+
+  <!-- log box -->
+  <rect x="24" y="282" width="592" height="150" rx="12" fill="#0a0d15" stroke="#232a3d"/>
+  <g font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="11.5">
+    <text x="40" y="308"><tspan fill="#8b93a7">15:07:42  </tspan><tspan fill="#e6e9f0">Starting. dir="…/scratchpad/rundir"  prompt="continue"</tspan></text>
+    <text x="40" y="332"><tspan fill="#8b93a7">15:07:42  </tspan><tspan fill="#e6e9f0">Cycle 1/100 — running claude…</tspan></text>
+    <text x="40" y="356"><tspan fill="#8b93a7">15:07:42  </tspan><tspan fill="#e6e9f0">Usage limit hit (epoch marker). Resets 15:12:28 → resume 15:12:31 (+3s).</tspan></text>
+    <text x="40" y="380"><tspan fill="#8b93a7">15:07:42  </tspan><tspan fill="#e6e9f0">Waiting 4m 46s — will resume at 15:12:31</tspan></text>
+  </g>
+
+  <text x="320" y="450" fill="#5a627a" font-size="10.5" text-anchor="middle">Running locally · leave this tab open so alerts can fire</text>
+</svg>
