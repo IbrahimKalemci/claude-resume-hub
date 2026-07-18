@@ -12,6 +12,7 @@
   },
   "files": [
     "bin",
+    "lib",
     "README.md",
     "LICENSE"
   ],
@@ -35,10 +36,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/IbrahimKalemci/claude-auto-resume.git"
+    "url": "git+https://github.com/IbrahimKalemci/claude-resume-hub.git"
   },
   "bugs": {
-    "url": "https://github.com/IbrahimKalemci/claude-auto-resume/issues"
+    "url": "https://github.com/IbrahimKalemci/claude-resume-hub/issues"
   },
-  "homepage": "https://github.com/IbrahimKalemci/claude-auto-resume#readme"
+  "homepage": "https://github.com/IbrahimKalemci/claude-resume-hub#readme"
 }

@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/dashboard.svg" alt="live dashboard with a big countdown, status and streaming log" width="620">
+  <img src="https://raw.githubusercontent.com/IbrahimKalemci/claude-resume-hub/main/docs/dashboard.svg" alt="live dashboard with a big countdown, status and streaming log" width="620">
 </p>
 
 <p align="center"><b>🇬🇧 <a href="#-english">English</a> &nbsp;·&nbsp; 🇹🇷 <a href="#-türkçe">Türkçe</a></b></p>
