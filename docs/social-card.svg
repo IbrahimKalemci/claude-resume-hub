@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640"
+     font-family="ui-sans-serif,system-ui,Segoe UI,Roboto,sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#16203a"/><stop offset="0.6" stop-color="#0b0e14"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#131826"/><stop offset="1" stop-color="#0f1420"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#bg)"/>
+
+  <!-- left column -->
+  <g>
+    <circle cx="82" cy="118" r="9" fill="#c96442"/>
+    <text x="102" y="130" fill="#e6e9f0" font-size="60" font-weight="800">claude-resume-hub</text>
+
+    <text x="80" y="210" fill="#c96442" font-size="30" font-weight="700">Never babysit a Claude Code usage limit again.</text>
+
+    <text x="80" y="272" fill="#e6e9f0" font-size="34" font-weight="600">Hit a limit at 2am?</text>
+    <text x="80" y="318" fill="#e6e9f0" font-size="34" font-weight="800">Wake up to finished work.</text>
+
+    <text x="80" y="378" fill="#8b93a7" font-size="24">It waits for the exact reset time and auto-continues —</text>
+    <text x="80" y="410" fill="#8b93a7" font-size="24">with a live dashboard and desktop alerts.</text>
+
+    <!-- command pill -->
+    <rect x="80" y="452" width="470" height="58" rx="12" fill="#0a0d15" stroke="#232a3d"/>
+    <text x="104" y="490" fill="#3fb950" font-size="26" font-family="ui-monospace,SFMono-Regular,Menlo,monospace">$ npx claude-resume-hub --web</text>
+
+    <text x="80" y="566" fill="#8b93a7" font-size="22">⏱ exact countdown   ·   🔔 desktop alerts   ·   🖥 live dashboard</text>
+    <text x="80" y="600" fill="#5a627a" font-size="20">Windows · macOS · Linux   ·   zero-dependency   ·   MIT</text>
+  </g>
+
+  <!-- right: mini dashboard card -->
+  <g>
+    <rect x="828" y="150" width="372" height="340" rx="22" fill="url(#card)" stroke="#232a3d"/>
+    <rect x="1092" y="176" width="82" height="30" rx="15" fill="none" stroke="#d29922"/>
+    <text x="1133" y="197" fill="#d29922" font-size="16" font-weight="600" text-anchor="middle">waiting</text>
+    <text x="1014" y="258" fill="#8b93a7" font-size="17" letter-spacing="2" text-anchor="middle">RESUMING IN</text>
+    <text x="1014" y="340" fill="#e6e9f0" font-size="72" font-weight="800" text-anchor="middle"
+          font-family="ui-monospace,SFMono-Regular,Menlo,monospace">00:04:42</text>
+    <text x="1014" y="386" fill="#8b93a7" font-size="18" text-anchor="middle">Limit hit — resuming automatically</text>
+    <line x1="864" y1="420" x2="1164" y2="420" stroke="#232a3d"/>
+    <text x="1014" y="452" font-size="17" text-anchor="middle"><tspan fill="#8b93a7">Cycle </tspan><tspan fill="#e6e9f0" font-weight="600">1 / 100</tspan></text>
+  </g>
+</svg>
