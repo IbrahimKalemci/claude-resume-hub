@@ -3,6 +3,14 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] — 2026-07-18
+
+### Added
+- `-s, --session <id>` — resume a **specific** session instead of only the most
+  recent one in the folder. Find ids with `claude --resume`.
+- Automated npm publishing via GitHub Actions on release (npm trusted publishing
+  / OIDC — no stored token). See `docs/RELEASING.md`.
+
 ## [1.0.0] — 2026-07-18
 
 ### Added

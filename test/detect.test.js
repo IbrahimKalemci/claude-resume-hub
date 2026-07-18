@@ -2,6 +2,7 @@
 const test = require("node:test");
 const assert = require("node:assert");
 const { detectLimit, parseClockTime, fmtDuration } = require("../lib/detect.js");
+const { buildClaudeArgs } = require("../lib/engine.js");
 
 test("epoch marker in seconds -> exact reset time", () => {
   const r = detectLimit("Claude AI usage limit reached|1759770000");
@@ -67,4 +68,26 @@ test("fmtDuration formats nicely", () => {
   assert.equal(fmtDuration(0), "0s");
   assert.equal(fmtDuration(65 * 1000), "1m 5s");
   assert.equal(fmtDuration(3661 * 1000), "1h 1m 1s");
+});
+
+test("buildClaudeArgs: default continues most recent session", () => {
+  assert.deepEqual(buildClaudeArgs({ prompt: "continue", passthrough: [] }, 2), ["-c", "-p", "continue"]);
+});
+
+test("buildClaudeArgs: first cycle with a task starts fresh", () => {
+  assert.deepEqual(buildClaudeArgs({ task: "do the thing", prompt: "continue", passthrough: [] }, 1), ["-p", "do the thing"]);
+});
+
+test("buildClaudeArgs: --session resumes a specific id", () => {
+  assert.deepEqual(
+    buildClaudeArgs({ session: "abc123", prompt: "continue", passthrough: [] }, 2),
+    ["--resume", "abc123", "-p", "continue"]
+  );
+});
+
+test("buildClaudeArgs: passthrough args are forwarded", () => {
+  assert.deepEqual(
+    buildClaudeArgs({ prompt: "continue", passthrough: ["--model", "opus"] }, 2),
+    ["-c", "-p", "continue", "--model", "opus"]
+  );
 });

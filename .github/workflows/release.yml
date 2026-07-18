@@ -1,0 +1,32 @@
+name: Publish to npm
+
+# Fires when you publish a GitHub Release (Releases → Draft a new release →
+# create a tag like v1.1.0 → Publish). No terminal, no stored token: publishing
+# uses npm "trusted publishing" over OIDC. One-time setup required on npmjs.com —
+# see docs/RELEASING.md.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write # required for npm provenance / OIDC trusted publishing
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - name: Update npm (OIDC trusted publishing needs npm >= 11.5)
+        run: npm install -g npm@latest
+      - name: Set package version from the release tag
+        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
+      - name: Run tests
+        run: node --test
+      - name: Publish to npm
+        run: npm publish --provenance --access public

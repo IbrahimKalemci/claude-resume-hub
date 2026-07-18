@@ -53,10 +53,12 @@ That's it. No install, no config. It works on **Windows, macOS and Linux**.
 npx claude-resume-hub              # no dashboard, just auto-resume
 npx claude-resume-hub --web        # with dashboard + alerts
 npx claude-resume-hub -t "run all tests and fix failures"   # start a task
+npx claude-resume-hub -s <id>      # resume a specific session (claude --resume lists ids)
 npx claude-resume-hub --help       # all options
 ```
 
 Prefer a permanent command? `npm i -g claude-resume-hub` gives you `crh --web`.
+**Always up to date:** `npx claude-resume-hub@latest` pulls the newest version automatically.
 
 ---
 
@@ -92,10 +94,12 @@ Hepsi bu. Kurulum yok, ayar yok. **Windows, macOS ve Linux**'ta çalışır.
 npx claude-resume-hub              # panelsiz, sadece otomatik devam
 npx claude-resume-hub --web        # panel + bildirim
 npx claude-resume-hub -t "tüm testleri çalıştır ve hataları düzelt"   # görev başlat
+npx claude-resume-hub -s <id>      # belirli bir session'ı devam ettir (claude --resume ile id'leri gör)
 npx claude-resume-hub --help       # tüm seçenekler
 ```
 
 Kalıcı komut ister misin? `npm i -g claude-resume-hub` sana `crh --web` verir.
+**Hep güncel:** `npx claude-resume-hub@latest` otomatik en yeni sürümü çeker.
 
 ---
 

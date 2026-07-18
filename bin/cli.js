@@ -16,6 +16,7 @@ function parseArgs(argv) {
   const opts = {
     prompt: "continue",
     task: null,
+    session: null,
     dir: process.cwd(),
     buffer: 30,
     poll: 5,
@@ -36,6 +37,7 @@ function parseArgs(argv) {
     switch (a) {
       case "-p": case "--prompt": opts.prompt = next(); break;
       case "-t": case "--task": opts.task = next(); break;
+      case "-s": case "--session": opts.session = next(); break;
       case "-d": case "--dir": opts.dir = next(); break;
       case "-b": case "--buffer": opts.buffer = parseInt(next(), 10); break;
       case "--poll": opts.poll = parseInt(next(), 10); break;
@@ -67,6 +69,8 @@ OPTIONS
   -p, --prompt <text>     Message sent to continue after a reset (default: "continue")
   -t, --task <text>       Initial task; starts a fresh session on the first run,
                           then continues it. Omit to attach to the most recent session.
+  -s, --session <id>      Resume a specific session id (instead of the most recent).
+                          Find ids by running: claude --resume
   -d, --dir <path>        Working directory / project (default: current dir)
   -b, --buffer <seconds>  Safety margin added after the reset time (default: 30)
       --poll <minutes>    Retry interval if a reset time can't be determined (default: 5)
