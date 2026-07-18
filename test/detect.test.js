@@ -1,8 +1,10 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert");
+const path = require("node:path");
 const { detectLimit, parseClockTime, fmtDuration } = require("../lib/detect.js");
 const { buildClaudeArgs } = require("../lib/engine.js");
+const { encodeDir, listSessions } = require("../lib/sessions.js");
 
 test("epoch marker in seconds -> exact reset time", () => {
   const r = detectLimit("Claude AI usage limit reached|1759770000");
@@ -90,4 +92,13 @@ test("buildClaudeArgs: passthrough args are forwarded", () => {
     buildClaudeArgs({ prompt: "continue", passthrough: ["--model", "opus"] }, 2),
     ["-c", "-p", "continue", "--model", "opus"]
   );
+});
+
+test("encodeDir strips path separators", () => {
+  const enc = encodeDir(process.cwd());
+  assert.ok(!/[/\\:]/.test(enc), `expected no separators, got: ${enc}`);
+});
+
+test("listSessions returns [] for an unknown project", () => {
+  assert.deepEqual(listSessions(path.join("/", "no", "such", "project", "xyz123")), []);
 });

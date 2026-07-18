@@ -53,7 +53,8 @@ That's it. No install, no config. It works on **Windows, macOS and Linux**.
 npx claude-resume-hub              # no dashboard, just auto-resume
 npx claude-resume-hub --web        # with dashboard + alerts
 npx claude-resume-hub -t "run all tests and fix failures"   # start a task
-npx claude-resume-hub -s <id>      # resume a specific session (claude --resume lists ids)
+npx claude-resume-hub --list       # list this project's sessions (+ their ids)
+npx claude-resume-hub -s <id>      # resume a specific session
 npx claude-resume-hub --help       # all options
 ```
 
@@ -94,7 +95,8 @@ Hepsi bu. Kurulum yok, ayar yok. **Windows, macOS ve Linux**'ta çalışır.
 npx claude-resume-hub              # panelsiz, sadece otomatik devam
 npx claude-resume-hub --web        # panel + bildirim
 npx claude-resume-hub -t "tüm testleri çalıştır ve hataları düzelt"   # görev başlat
-npx claude-resume-hub -s <id>      # belirli bir session'ı devam ettir (claude --resume ile id'leri gör)
+npx claude-resume-hub --list       # bu projenin session'larını listele (+ id'leri)
+npx claude-resume-hub -s <id>      # belirli bir session'ı devam ettir
 npx claude-resume-hub --help       # tüm seçenekler
 ```
 

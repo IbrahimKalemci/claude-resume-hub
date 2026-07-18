@@ -3,6 +3,14 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] — 2026-07-18
+
+### Added
+- `-l, --list` — list this project's Claude Code sessions (newest first) with
+  their ids, last-used time, turn count, size, and a preview of the first
+  message. Marks the one plain `-c` resumes. Pair it with `--session <id>` to
+  resume an exact one.
+
 ## [1.1.0] — 2026-07-18
 
 ### Added

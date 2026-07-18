@@ -22,6 +22,7 @@ function parseArgs(argv) {
     poll: 5,
     maxCycles: 100,
     verbose: false,
+    list: false,
     web: false,
     port: 4177,
     open: true,
@@ -42,6 +43,7 @@ function parseArgs(argv) {
       case "-b": case "--buffer": opts.buffer = parseInt(next(), 10); break;
       case "--poll": opts.poll = parseInt(next(), 10); break;
       case "-m": case "--max-cycles": opts.maxCycles = parseInt(next(), 10); break;
+      case "-l": case "--list": opts.list = true; break;
       case "-w": case "--web": opts.web = true; break;
       case "--port": opts.port = parseInt(next(), 10); break;
       case "--no-open": opts.open = false; break;
@@ -75,6 +77,7 @@ OPTIONS
   -b, --buffer <seconds>  Safety margin added after the reset time (default: 30)
       --poll <minutes>    Retry interval if a reset time can't be determined (default: 5)
   -m, --max-cycles <n>    Max limit->wait->continue cycles (default: 100)
+  -l, --list              List Claude Code sessions in this project and exit
   -w, --web               Open a live dashboard (countdown + desktop alerts)
       --port <n>          Dashboard port (default: 4177)
       --no-open           Don't auto-open the browser for the dashboard
@@ -85,6 +88,8 @@ OPTIONS
 EXAMPLES
   claude-resume-hub                 # keep the latest session going across resets
   claude-resume-hub --web           # ...with a live dashboard + desktop alerts
+  claude-resume-hub --list          # see this project's sessions and their ids
+  claude-resume-hub -s <id>         # resume a specific session id
   claude-resume-hub -t "run all the tests and fix failures"
   claude-resume-hub -- --model opus # forward flags to claude
 `);
@@ -93,8 +98,36 @@ EXAMPLES
 const C = { cyan: "\x1b[36m", dim: "\x1b[2m", green: "\x1b[32m", yellow: "\x1b[33m", red: "\x1b[31m", reset: "\x1b[0m" };
 const stamp = () => new Date().toLocaleString();
 
+function printSessions(dir) {
+  const { listSessions, findProjectFolder } = require("../lib/sessions");
+  if (!findProjectFolder(dir)) {
+    console.log(`No Claude Code sessions found for:\n  ${dir}`);
+    console.log(`${C.dim}(Looked in ~/.claude/projects. Run this in your project folder, or pass -d <path>.)${C.reset}`);
+    return;
+  }
+  const sessions = listSessions(dir);
+  if (!sessions.length) { console.log("No sessions in this project yet."); return; }
+
+  console.log(`\nClaude Code sessions for ${C.cyan}${dir}${C.reset}  ${C.dim}(newest first)${C.reset}\n`);
+  sessions.forEach((s, i) => {
+    const dot = i === 0 ? `${C.green}●${C.reset}` : " ";
+    console.log(`${dot} ${s.id}`);
+    console.log(`   ${C.dim}${s.mtime.toLocaleString()} · ${s.turns} turns · ${s.sizeKB} KB${C.reset}`);
+    if (s.preview) console.log(`   ${C.dim}"${s.preview}${s.preview.length >= 80 ? "…" : ""}"${C.reset}`);
+    console.log("");
+  });
+  console.log(`${C.green}●${C.reset} ${C.dim}= what plain "continue" (-c) resumes (the most recent).${C.reset}`);
+  console.log(`${C.dim}Resume a specific one:  ${C.reset}crh --session <id>`);
+}
+
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
+
+  if (opts.list) {
+    printSessions(opts.dir);
+    process.exit(0);
+  }
+
   const engine = new AutoResumeEngine(opts);
 
   // Colorize a few known log lines for the terminal.
