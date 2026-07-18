@@ -98,6 +98,18 @@ Kalıcı komut ister misin? `npm i -g claude-resume-hub` sana `crh --web` verir.
 
 ---
 
+## 🛠️ From source · Kaynaktan
+
+Prefer to run it straight from the repo (no npm)? / npm'siz, doğrudan repodan mı çalıştırmak istiyorsun?
+
+```bash
+git clone https://github.com/IbrahimKalemci/claude-resume-hub.git
+cd claude-resume-hub
+node bin/cli.js --web
+```
+
+---
+
 <p align="center">
   Made for everyone who's tired of waiting on the reset clock.<br>
   <b>MIT</b> © Ibrahim Kalemci · <a href="CHANGELOG.md">Changelog</a>
