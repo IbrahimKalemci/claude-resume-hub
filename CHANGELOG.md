@@ -3,6 +3,14 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.0] — 2026-07-18
+
+### Added
+- `--smart` — context-aware resume. Reads the most recent session's last step
+  from the transcript (locally, no AI/network) and nudges Claude to pick up
+  exactly there, and to say so if the task is already done rather than invent
+  new work (so a fresh window isn't wasted). Falls back to plain "continue".
+
 ## [1.2.0] — 2026-07-18
 
 ### Added

@@ -4,7 +4,7 @@ const assert = require("node:assert");
 const path = require("node:path");
 const { detectLimit, parseClockTime, fmtDuration } = require("../lib/detect.js");
 const { buildClaudeArgs } = require("../lib/engine.js");
-const { encodeDir, listSessions } = require("../lib/sessions.js");
+const { encodeDir, listSessions, lastAssistantText } = require("../lib/sessions.js");
 
 test("epoch marker in seconds -> exact reset time", () => {
   const r = detectLimit("Claude AI usage limit reached|1759770000");
@@ -101,4 +101,19 @@ test("encodeDir strips path separators", () => {
 
 test("listSessions returns [] for an unknown project", () => {
   assert.deepEqual(listSessions(path.join("/", "no", "such", "project", "xyz123")), []);
+});
+
+test("lastAssistantText picks the final assistant text message", () => {
+  const lines = [
+    JSON.stringify({ type: "user", message: { role: "user", content: "hi" } }),
+    JSON.stringify({ type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "first reply" }] } }),
+    JSON.stringify({ type: "user", message: { role: "user", content: "more" } }),
+    JSON.stringify({ type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "the last step I did" }] } }),
+  ];
+  assert.equal(lastAssistantText(lines), "the last step I did");
+});
+
+test("lastAssistantText returns '' when there is no assistant text", () => {
+  const lines = [JSON.stringify({ type: "user", message: { role: "user", content: "hi" } })];
+  assert.equal(lastAssistantText(lines), "");
 });

@@ -23,6 +23,7 @@ function parseArgs(argv) {
     maxCycles: 100,
     verbose: false,
     list: false,
+    smart: false,
     web: false,
     port: 4177,
     open: true,
@@ -44,6 +45,7 @@ function parseArgs(argv) {
       case "--poll": opts.poll = parseInt(next(), 10); break;
       case "-m": case "--max-cycles": opts.maxCycles = parseInt(next(), 10); break;
       case "-l": case "--list": opts.list = true; break;
+      case "--smart": opts.smart = true; break;
       case "-w": case "--web": opts.web = true; break;
       case "--port": opts.port = parseInt(next(), 10); break;
       case "--no-open": opts.open = false; break;
@@ -78,6 +80,9 @@ OPTIONS
       --poll <minutes>    Retry interval if a reset time can't be determined (default: 5)
   -m, --max-cycles <n>    Max limit->wait->continue cycles (default: 100)
   -l, --list              List Claude Code sessions in this project and exit
+      --smart             Context-aware resume: reads the session's last step and
+                          nudges Claude to pick up exactly there (instead of a bare
+                          "continue"). Reads the transcript locally; no AI/network.
   -w, --web               Open a live dashboard (countdown + desktop alerts)
       --port <n>          Dashboard port (default: 4177)
       --no-open           Don't auto-open the browser for the dashboard
@@ -89,6 +94,7 @@ EXAMPLES
   claude-resume-hub                 # keep the latest session going across resets
   claude-resume-hub --web           # ...with a live dashboard + desktop alerts
   claude-resume-hub --list          # see this project's sessions and their ids
+  claude-resume-hub --web --smart   # context-aware resume (picks up your last step)
   claude-resume-hub -s <id>         # resume a specific session id
   claude-resume-hub -t "run all the tests and fix failures"
   claude-resume-hub -- --model opus # forward flags to claude
@@ -126,6 +132,21 @@ async function main() {
   if (opts.list) {
     printSessions(opts.dir);
     process.exit(0);
+  }
+
+  // --smart: build a context-aware resume prompt from the session's last step.
+  if (opts.smart && !opts.task) {
+    const { sessionRecap } = require("../lib/sessions");
+    const recap = sessionRecap(opts.dir);
+    if (recap) {
+      opts.prompt =
+        `Continue where you left off and finish the task you were working on. ` +
+        `If it is already complete, say so instead of inventing new work. ` +
+        `For context, your last message was: "${recap.slice(0, 300)}${recap.length > 300 ? "…" : ""}"`;
+      console.log(`${C.dim}[auto-resume] smart mode: resuming with context from your last step.${C.reset}`);
+    } else {
+      console.log(`${C.dim}[auto-resume] smart mode: no prior session found — using plain "continue".${C.reset}`);
+    }
   }
 
   const engine = new AutoResumeEngine(opts);
