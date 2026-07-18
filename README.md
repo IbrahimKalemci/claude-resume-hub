@@ -7,6 +7,7 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/claude-resume-hub"><img src="https://img.shields.io/npm/v/claude-resume-hub?color=c96442" alt="npm"></a>
+  <a href="https://github.com/IbrahimKalemci/claude-resume-hub/actions/workflows/ci.yml"><img src="https://github.com/IbrahimKalemci/claude-resume-hub/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/node-%3E%3D16-3fb950" alt="node >= 16">
   <img src="https://img.shields.io/badge/Windows%20%7C%20macOS%20%7C%20Linux-8b93a7" alt="platforms">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT"></a>
