@@ -1,20 +1,20 @@
-name: Publish to npm
+name: Publish
 
 # Fires when you publish a GitHub Release (Releases → Draft a new release →
-# create a tag like v1.1.0 → Publish). No terminal, no stored token: publishing
-# uses npm "trusted publishing" over OIDC. One-time setup required on npmjs.com —
-# see docs/RELEASING.md.
+# create a tag like v1.4.0 → Publish). Publishes to npm via OIDC "trusted
+# publishing" (no stored token — one-time setup on npmjs.com, see docs/RELEASING.md)
+# AND builds a standalone .exe per OS, attaching them to the Release.
 
 on:
   release:
     types: [published]
 
 permissions:
-  contents: read
+  contents: write # write: the binaries job uploads assets to the Release
   id-token: write # required for npm provenance / OIDC trusted publishing
 
 jobs:
-  publish:
+  publish-npm:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,3 +30,43 @@ jobs:
         run: node --test
       - name: Publish to npm
         run: npm publish --provenance --access public
+
+  binaries:
+    name: build exe (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            asset: claude-resume-hub-windows-x64
+          - os: macos-latest
+            asset: claude-resume-hub-macos-arm64
+          - os: ubuntu-latest
+            asset: claude-resume-hub-linux-x64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Match version to the release tag
+        shell: bash
+        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
+      - name: Install (esbuild) + build exe
+        run: |
+          npm install --no-audit --no-fund
+          npm run build:exe
+      - name: Package
+        shell: bash
+        run: |
+          cd dist
+          if [ "${RUNNER_OS}" = "Windows" ]; then
+            7z a "../${{ matrix.asset }}.zip" claude-resume-hub.exe
+          else
+            zip "../${{ matrix.asset }}.zip" claude-resume-hub
+          fi
+      - name: Attach to release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${GITHUB_REF_NAME}" "${{ matrix.asset }}.zip" --clobber

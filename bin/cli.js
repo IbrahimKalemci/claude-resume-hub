@@ -25,6 +25,7 @@ function parseArgs(argv) {
     list: false,
     smart: false,
     web: false,
+    tray: false,
     port: 4177,
     open: true,
     passthrough: [],
@@ -47,6 +48,7 @@ function parseArgs(argv) {
       case "-l": case "--list": opts.list = true; break;
       case "--smart": opts.smart = true; break;
       case "-w": case "--web": opts.web = true; break;
+      case "--tray": opts.tray = true; opts.web = true; break;
       case "--port": opts.port = parseInt(next(), 10); break;
       case "--no-open": opts.open = false; break;
       case "--verbose": opts.verbose = true; break;
@@ -85,6 +87,8 @@ OPTIONS
                           nudges Claude to pick up exactly there (instead of a bare
                           "continue"). Reads the transcript locally; no AI/network.
   -w, --web               Open a live dashboard (countdown + desktop alerts)
+      --tray              Run a system-tray icon (Windows; implies --web). On
+                          macOS/Linux this falls back to the browser dashboard.
       --port <n>          Dashboard port (default: 4177)
       --no-open           Don't auto-open the browser for the dashboard
       --verbose           Print detection diagnostics
@@ -94,6 +98,7 @@ OPTIONS
 EXAMPLES
   claude-resume-hub                 # keep the latest session going across resets
   claude-resume-hub --web           # ...with a live dashboard + desktop alerts
+  claude-resume-hub --tray          # background system-tray icon (Windows)
   claude-resume-hub --list          # see this project's sessions and their ids
   claude-resume-hub --web --smart   # context-aware resume (picks up your last step)
   claude-resume-hub -s <id>         # resume a specific session id
@@ -141,6 +146,23 @@ async function main() {
     console.log(`${C.dim}   To continue your existing (stopped) session instead, run without -t:  claude-resume-hub --smart   (or pick one with --list / --session)${C.reset}`);
   }
 
+  // Pin the target session up front so every cycle resumes the SAME conversation.
+  // Plain "-c" means "most recent by mtime" and can silently switch to the wrong
+  // session (the tool's own prior run, or a second terminal). Resolving + pinning
+  // a concrete id, and printing it, makes resume predictable.
+  if (!opts.session && !opts.task) {
+    const { pickActiveSession } = require("../lib/sessions");
+    const active = pickActiveSession(opts.dir);
+    if (active) {
+      opts.session = active.id;
+      console.log(`${C.cyan}[auto-resume]${C.reset} Resuming session ${C.green}${active.id}${C.reset}`);
+      console.log(`${C.dim}   last activity ${active.mtime.toLocaleString()} · ${active.turns} prompts${active.preview ? ` · "${active.preview.slice(0, 48)}…"` : ""}${C.reset}`);
+      console.log(`${C.dim}   not this one? →  claude-resume-hub --list   then   --session <id>${C.reset}`);
+    } else {
+      console.log(`${C.dim}[auto-resume] No prior session found here — will use "claude -c" (most recent).${C.reset}`);
+    }
+  }
+
   // --smart: build a context-aware resume prompt from the session's last step.
   if (opts.smart && !opts.task) {
     const { sessionRecap } = require("../lib/sessions");
@@ -157,6 +179,8 @@ async function main() {
   }
 
   const engine = new AutoResumeEngine(opts);
+  let trayChild = null;
+  const cleanup = () => { if (trayChild) { try { trayChild.kill(); } catch {} trayChild = null; } };
 
   // Colorize a few known log lines for the terminal.
   engine.on("log", (line) => {
@@ -169,17 +193,28 @@ async function main() {
   engine.on("output", (chunk) => process.stdout.write(chunk));
 
   if (opts.web) {
-    const { url, error } = await startDashboard(engine, { port: opts.port, open: opts.open });
-    if (url) console.log(`${C.green}[auto-resume]${C.reset} Dashboard: ${url}  (leave it open for desktop alerts)`);
-    else console.log(`${C.red}[auto-resume]${C.reset} Could not start dashboard: ${error && error.message}`);
+    // When running the tray, don't also pop a browser tab — the tray is the UI.
+    const { url, error } = await startDashboard(engine, { port: opts.port, open: opts.open && !opts.tray });
+    if (url) {
+      console.log(`${C.green}[auto-resume]${C.reset} Dashboard: ${url}  (leave it open for desktop alerts)`);
+      if (opts.tray) {
+        const { startTray } = require("../lib/tray");
+        const t = startTray(url);
+        if (t.ok) { trayChild = t.child; console.log(`${C.green}[auto-resume]${C.reset} Tray icon started — check your system tray; right-click for options.`); }
+        else console.log(`${C.yellow}[auto-resume]${C.reset} Tray unavailable (${t.reason}); the dashboard is still at ${url}`);
+      }
+    } else {
+      console.log(`${C.red}[auto-resume]${C.reset} Could not start dashboard: ${error && error.message}`);
+    }
   }
 
-  process.on("SIGINT", () => { console.log("\n[auto-resume] Interrupted. Bye."); engine.stop(); process.exit(130); });
+  process.on("SIGINT", () => { console.log("\n[auto-resume] Interrupted. Bye."); cleanup(); engine.stop(); process.exit(130); });
 
   const result = await engine.run();
-  // Keep the process (and dashboard) alive briefly so the browser sees the final state.
-  if (opts.web) setTimeout(() => process.exit(result.code), 1500);
-  else process.exit(result.code);
+  // Keep the process (and dashboard) alive briefly so the browser sees the final
+  // state; the tray self-exits once /status stops responding, but kill it too.
+  if (opts.web) setTimeout(() => { cleanup(); process.exit(result.code); }, 1500);
+  else { cleanup(); process.exit(result.code); }
 }
 
 main().catch((err) => { console.error("[auto-resume] Fatal:", err); process.exit(1); });

@@ -52,6 +52,7 @@ That's it. No install, no config. It works on **Windows, macOS and Linux**.
 ```bash
 npx claude-resume-hub              # no dashboard, just auto-resume
 npx claude-resume-hub --web        # with dashboard + alerts
+npx claude-resume-hub --tray       # background system-tray icon (Windows)
 npx claude-resume-hub -t "run all tests and fix failures"   # start a NEW session (not resume)
 npx claude-resume-hub --list       # list this project's sessions (+ their ids)
 npx claude-resume-hub --web --smart # context-aware resume (picks up your last step)
@@ -61,6 +62,7 @@ npx claude-resume-hub --help       # all options
 
 Prefer a permanent command? `npm i -g claude-resume-hub` gives you `crh --web`.
 **Always up to date:** `npx claude-resume-hub@latest` pulls the newest version automatically.
+**No Node?** Grab a standalone **.exe** from the [latest release](https://github.com/IbrahimKalemci/claude-resume-hub/releases) (Windows/macOS/Linux). It still needs the `claude` CLI on your PATH.
 
 ---
 
@@ -95,6 +97,7 @@ Hepsi bu. Kurulum yok, ayar yok. **Windows, macOS ve Linux**'ta çalışır.
 ```bash
 npx claude-resume-hub              # panelsiz, sadece otomatik devam
 npx claude-resume-hub --web        # panel + bildirim
+npx claude-resume-hub --tray       # arka planda sistem tepsisi ikonu (Windows)
 npx claude-resume-hub -t "tüm testleri çalıştır ve hataları düzelt"   # YENİ session başlat (devam DEĞİL)
 npx claude-resume-hub --list       # bu projenin session'larını listele (+ id'leri)
 npx claude-resume-hub --web --smart # bağlam-farkında devam (kaldığın adımdan sürer)
@@ -104,6 +107,7 @@ npx claude-resume-hub --help       # tüm seçenekler
 
 Kalıcı komut ister misin? `npm i -g claude-resume-hub` sana `crh --web` verir.
 **Hep güncel:** `npx claude-resume-hub@latest` otomatik en yeni sürümü çeker.
+**Node yok mu?** [Son sürümden](https://github.com/IbrahimKalemci/claude-resume-hub/releases) standalone **.exe** indir (Windows/macOS/Linux). Yine de `claude` CLI'ın PATH'te olması gerekir.
 
 ---
 

@@ -4,7 +4,8 @@ const assert = require("node:assert");
 const path = require("node:path");
 const { detectLimit, parseClockTime, fmtDuration } = require("../lib/detect.js");
 const { buildClaudeArgs } = require("../lib/engine.js");
-const { encodeDir, listSessions, lastAssistantText } = require("../lib/sessions.js");
+const { encodeDir, listSessions, lastAssistantText, pickActiveSession } = require("../lib/sessions.js");
+const { PS_SCRIPT, startTray } = require("../lib/tray.js");
 
 test("epoch marker in seconds -> exact reset time", () => {
   const r = detectLimit("Claude AI usage limit reached|1759770000");
@@ -126,4 +127,22 @@ test("lastAssistantText picks the final assistant text message", () => {
 test("lastAssistantText returns '' when there is no assistant text", () => {
   const lines = [JSON.stringify({ type: "user", message: { role: "user", content: "hi" } })];
   assert.equal(lastAssistantText(lines), "");
+});
+
+test("pickActiveSession is consistent with listSessions()[0]", () => {
+  const dir = process.cwd();
+  const expected = listSessions(dir)[0] || null;
+  assert.deepEqual(pickActiveSession(dir), expected);
+});
+
+test("pickActiveSession returns null for an unknown project", () => {
+  assert.equal(pickActiveSession(path.join("/", "no", "such", "project", "zzz")), null);
+});
+
+test("tray PS_SCRIPT is a NotifyIcon shim; startTray is a no-op off Windows", () => {
+  assert.ok(PS_SCRIPT.includes("NotifyIcon"));
+  assert.ok(PS_SCRIPT.includes("/status") || PS_SCRIPT.includes('"/status"') || PS_SCRIPT.includes("+ \"/status\""));
+  if (process.platform !== "win32") {
+    assert.equal(startTray("http://127.0.0.1:1").ok, false);
+  }
 });
