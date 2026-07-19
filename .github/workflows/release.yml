@@ -56,17 +56,16 @@ jobs:
         run: |
           npm install --no-audit --no-fund
           npm run build:exe
-      - name: Package
-        shell: bash
-        run: |
-          cd dist
-          if [ "${RUNNER_OS}" = "Windows" ]; then
-            7z a "../${{ matrix.asset }}.zip" claude-resume-hub.exe
-          else
-            zip "../${{ matrix.asset }}.zip" claude-resume-hub
-          fi
-      - name: Attach to release
+      - name: Attach binary to release (raw, no zip — click to download & run)
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${GITHUB_REF_NAME}" "${{ matrix.asset }}.zip" --clobber
+        run: |
+          cd dist
+          if [ "${RUNNER_OS}" = "Windows" ]; then
+            mv claude-resume-hub.exe "${{ matrix.asset }}.exe"
+            gh release upload "${GITHUB_REF_NAME}" "${{ matrix.asset }}.exe" --clobber
+          else
+            mv claude-resume-hub "${{ matrix.asset }}"
+            gh release upload "${GITHUB_REF_NAME}" "${{ matrix.asset }}" --clobber
+          fi

@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.4.2] — 2026-07-20
+
+### Changed
+- Release assets are now the **raw executables** (`claude-resume-hub-windows-x64.exe`,
+  and the macOS/Linux binaries) instead of `.zip` archives — download and run, no unzip step.
+
 ## [1.4.0] — 2026-07-20
 
 ### Added
