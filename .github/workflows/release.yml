@@ -30,6 +30,14 @@ jobs:
         run: node --test
       - name: Publish to npm
         run: npm publish --provenance --access public
+      - name: Auto-fill release notes from CHANGELOG
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/release-notes.js "${GITHUB_REF_NAME#v}" > /tmp/notes.md
+          echo "" >> /tmp/notes.md
+          echo "**Full changelog:** https://github.com/IbrahimKalemci/claude-resume-hub/blob/main/CHANGELOG.md" >> /tmp/notes.md
+          gh release edit "${GITHUB_REF_NAME}" --notes-file /tmp/notes.md
 
   binaries:
     name: build exe (${{ matrix.os }})
