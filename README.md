@@ -62,7 +62,7 @@ npx claude-resume-hub --help       # all options
 
 Prefer a permanent command? `npm i -g claude-resume-hub` gives you `crh --web`.
 **Always up to date:** `npx claude-resume-hub@latest` pulls the newest version automatically.
-**No Node?** Grab a standalone **.exe** from the [latest release](https://github.com/IbrahimKalemci/claude-resume-hub/releases) (Windows/macOS/Linux). It still needs the `claude` CLI on your PATH.
+**No Node?** [**⬇ Download a standalone binary**](https://github.com/IbrahimKalemci/claude-resume-hub/releases/latest) (Windows `.exe` / macOS / Linux) — runs without Node installed. It still needs the `claude` CLI on your PATH.
 
 ---
 
@@ -107,7 +107,7 @@ npx claude-resume-hub --help       # tüm seçenekler
 
 Kalıcı komut ister misin? `npm i -g claude-resume-hub` sana `crh --web` verir.
 **Hep güncel:** `npx claude-resume-hub@latest` otomatik en yeni sürümü çeker.
-**Node yok mu?** [Son sürümden](https://github.com/IbrahimKalemci/claude-resume-hub/releases) standalone **.exe** indir (Windows/macOS/Linux). Yine de `claude` CLI'ın PATH'te olması gerekir.
+**Node yok mu?** [**⬇ Standalone binary indir**](https://github.com/IbrahimKalemci/claude-resume-hub/releases/latest) (Windows `.exe` / macOS / Linux) — Node kurulu olmadan çalışır. Yine de `claude` CLI'ın PATH'te olması gerekir.
 
 ---
 
