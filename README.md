@@ -111,6 +111,14 @@ Kalıcı komut ister misin? `npm i -g claude-resume-hub` sana `crh --web` verir.
 
 ---
 
+## 🔒 Security & privacy
+
+- **It never touches your tokens.** The tool does **not** read or store your Claude credentials (`~/.claude/.credentials.json` / the OS keychain). It only reads conversation transcripts under `~/.claude/projects` — on your own machine, at runtime.
+- **Nothing leaves your machine.** No telemetry, no network calls of its own. The `--web` dashboard is localhost-only.
+- **The binary contains only code — no sessions, no tokens.** Release executables are built by GitHub Actions from source on clean runners, so a downloaded `.exe` can't expose anyone's data (there's none embedded). Each user's run reads only *their own* local `~/.claude`.
+
+> **Güvenlik:** Token/kimlik bilgisi *hiç* okunmaz veya saklanmaz — sadece kendi makinendeki konuşma metinleri okunur. Panel yalnızca localhost. İndirilen `.exe` yalnızca kod içerir (session/token gömülü değil), CI'da kaynaktan temiz sunucularda derlenir.
+
 ## 🛠️ From source · Kaynaktan
 
 Prefer to run it straight from the repo (no npm)? / npm'siz, doğrudan repodan mı çalıştırmak istiyorsun?
