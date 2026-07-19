@@ -14,6 +14,10 @@ This project adheres to [Semantic Versioning](https://semver.org/).
   PowerShell NotifyIcon shim that rides built-in .NET): colours by phase, balloon
   notifications, right-click menu [Open dashboard, Quit]. Implies `--web`; on
   macOS/Linux it falls back to the browser dashboard. Self-exits when the run ends.
+- **`--smart`** — context-aware resume. Reads the session's last step from the
+  transcript (locally, no AI/network) and nudges Claude to pick up exactly there,
+  and to say so if the task is already done rather than invent new work (so a
+  fresh window isn't wasted). Falls back to plain "continue".
 - Dashboard `/status` JSON endpoint (what the tray polls).
 
 ### Changed
@@ -22,26 +26,16 @@ This project adheres to [Semantic Versioning](https://semver.org/).
   every cycle instead of a blind `-c` — killing the footgun where "most recent"
   silently switched to the wrong session. Override with `--list` / `--session`.
 - `--list` turn counts are now real human-prompt counts (tool traffic no longer inflates them).
+- Clearer `--task`: it starts a **new** session, and the CLI now prints a note
+  saying so (with resume alternatives) — real users hit `-t` expecting it to
+  continue an existing session. `--help` wording sharpened.
+- `parseClockTime` is clock-injectable (deterministic, midnight-safe tests).
 
 ### Notes
 - Antigravity auto-resume is intentionally **not** supported: its state is opaque
   protobuf with no on-disk limit signal and a different (Google) quota system.
   This tool scopes to Claude Code, where resume is reliable.
-
-## [1.3.1] — 2026-07-18
-
-### Changed
-- Clearer `--task` behavior: it starts a **new** session, and the CLI now prints
-  a note saying so (with the resume alternatives), after real users hit it
-  expecting `-t` to continue an existing session. Sharpened the `--help` wording.
-
-## [1.3.0] — 2026-07-18
-
-### Added
-- `--smart` — context-aware resume. Reads the most recent session's last step
-  from the transcript (locally, no AI/network) and nudges Claude to pick up
-  exactly there, and to say so if the task is already done rather than invent
-  new work (so a fresh window isn't wasted). Falls back to plain "continue".
+- Rolls up everything since 1.2.0 (the 1.3.x work was never published to npm).
 
 ## [1.2.0] — 2026-07-18
 
