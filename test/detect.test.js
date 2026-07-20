@@ -58,7 +58,12 @@ test("normal successful output -> not a limit", () => {
 
 test("detectAuthError catches an auth failure (even alongside 'continue')", () => {
   assert.ok(detectAuthError("Authentication failed. Sign in again to continue."));
-  assert.ok(detectAuthError("Please run `claude login` to continue"));
+  assert.ok(detectAuthError("Invalid API key. Please sign in."));
+  assert.ok(detectAuthError("Error: not logged in"));
+});
+
+test("detectAuthError doesn't flag a normal answer that just mentions login", () => {
+  assert.equal(detectAuthError("I added a /login route and a claude login example to the docs."), null);
 });
 
 test("detectAuthError ignores normal + limit output", () => {
