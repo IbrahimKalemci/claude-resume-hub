@@ -97,6 +97,17 @@
   .actions{display:flex;gap:8px;margin-top:10px}
   .actions .btn{flex:1;padding:8px}
 
+  /* choice rows */
+  .choice{display:flex;align-items:flex-start;gap:9px;padding:9px 10px;border:1px solid var(--line);
+          border-radius:11px;background:#0c1018;cursor:pointer;margin-bottom:7px;font-size:12px;line-height:1.4}
+  .choice:hover{border-color:var(--dim)}
+  .choice input{display:none}
+  .radio{width:14px;height:14px;border-radius:50%;border:1.6px solid var(--faint);flex:none;margin-top:1px;position:relative}
+  .choice input:checked ~ .radio{border-color:var(--accent)}
+  .choice input:checked ~ .radio::after{content:"";position:absolute;inset:2.5px;border-radius:50%;background:var(--accent)}
+  .choice:has(input:checked){border-color:var(--accent);background:#141017}
+  .choice .sub2{display:block;color:var(--faint);font-size:10.5px;margin-top:2px}
+
   /* ---------- log ---------- */
   #log{background:#0a0d15;border:1px solid var(--line);border-radius:10px;padding:8px;height:104px;
        overflow-y:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;line-height:1.6}
@@ -179,14 +190,30 @@
       <div class="meta" id="statMeta"></div>
     </section>
 
-    <!-- task -->
+    <!-- action -->
     <section class="card">
-      <h2>Task</h2>
-      <textarea id="task" placeholder="Leave empty to RESUME the session above.&#10;Type something to start a NEW session with that task."></textarea>
-      <div class="row" style="margin-top:8px">
+      <h2>What should Claude do with this session?</h2>
+
+      <label class="choice">
+        <input type="radio" name="mode" value="continue" checked /><span class="radio"></span>
+        <span><b>Continue</b> where it left off
+          <span class="sub2">Sends “continue” the moment the limit resets.</span></span>
+      </label>
+
+      <label class="choice">
+        <input type="radio" name="mode" value="task" /><span class="radio"></span>
+        <span><b>Give it a task</b>
+          <span class="sub2">Send your own instruction to this same session instead.</span></span>
+      </label>
+
+      <textarea id="task" style="display:none" placeholder="e.g. finish the refactor and run the tests"></textarea>
+
+      <div class="row" style="margin-top:9px;gap:14px;flex-wrap:wrap">
         <label class="toggle"><input type="checkbox" id="smart" /><span class="switch"></span> Smart resume</label>
+        <label class="toggle"><input type="checkbox" id="newSession" /><span class="switch"></span> New session</label>
       </div>
-      <div class="hint" id="taskHint">Empty = continue where the session stopped. With text = a brand-new session.</div>
+      <div class="hint" id="taskHint">Sends “continue” to the session above when the limit opens.</div>
+
       <div class="actions">
         <button class="btn primary" id="start">Start</button>
         <button class="btn danger" id="stop" disabled>Stop</button>
@@ -308,9 +335,19 @@
       meta.textContent = "";
     }
 
-    var busy = (p === "running" || p === "waiting" || p === "starting");
-    $("start").disabled = busy;
-    $("stop").disabled = !busy;
+    updateButtons();
+  }
+
+  function isBusy() {
+    var p = state.phase;
+    return p === "running" || p === "waiting" || p === "starting";
+  }
+
+  function updateButtons() {
+    var m = mode(), txt = $("task").value.trim(), isNew = $("newSession").checked;
+    // "Give it a task" needs text before you can start.
+    $("start").disabled = isBusy() || (m === "task" && !isNew && !txt);
+    $("stop").disabled = !isBusy();
   }
 
   function addLog(entry) {
@@ -368,21 +405,60 @@
       api.saveSettings(settings); loadSessions();
     });
   };
-  $("task").addEventListener("input", function () {
-    var has = $("task").value.trim().length > 0;
-    $("taskHint").innerHTML = has
-      ? "⚠ A task is set → this starts a <b>NEW</b> session (it will not continue the one above)."
-      : "Empty = continue where the session stopped. With text = a brand-new session.";
-    $("taskHint").style.color = has ? "var(--warn)" : "";
-  });
+  function mode() {
+    var el = document.querySelector('input[name="mode"]:checked');
+    return el ? el.value : "continue";
+  }
+
+  function refreshAction() {
+    var m = mode(), isNew = $("newSession").checked, txt = $("task").value.trim();
+    $("task").style.display = (m === "task" || isNew) ? "block" : "none";
+
+    var hint = $("taskHint");
+    hint.style.color = "";
+    if (isNew) {
+      hint.innerHTML = "⚠ <b>New session</b> — starts a fresh conversation, it will NOT continue the one above.";
+      hint.style.color = "var(--warn)";
+    } else if (m === "task") {
+      hint.textContent = txt
+        ? "Sends your instruction to the session above once the limit opens."
+        : "Type the instruction to send to that session.";
+    } else {
+      hint.textContent = "Sends “continue” to the session above once the limit opens.";
+    }
+    updateButtons();
+  }
+
   $("start").onclick = function () {
-    var task = $("task").value.trim();
-    addLog({ line: task ? "Starting a new session…" : "Resuming " + short(selectedId || "") + "…" });
-    api.start({
-      dir: settings.dir, sessionId: task ? null : selectedId, task: task || null,
-      prompt: "continue", smart: $("smart").checked, buffer: Number($("sBuffer").value) || 30
-    }).then(function (r) { if (r && r.ok === false) addLog({ line: "Could not start: " + (r.error || "unknown error") }); });
+    var m = mode(), isNew = $("newSession").checked, txt = $("task").value.trim();
+    var opts = {
+      dir: settings.dir, smart: $("smart").checked, buffer: Number($("sBuffer").value) || 30,
+      sessionId: null, task: null, prompt: "continue",
+    };
+
+    if (isNew) {
+      opts.task = txt || "continue";
+      addLog({ line: "Starting a NEW session…" });
+    } else if (m === "task") {
+      opts.sessionId = selectedId;
+      opts.prompt = txt;                    // same session, your own instruction
+      addLog({ line: "Sending your task to " + short(selectedId || "") + "…" });
+    } else {
+      opts.sessionId = selectedId;
+      opts.prompt = "continue";             // same session, plain continue
+      addLog({ line: "Resuming " + short(selectedId || "") + "…" });
+    }
+
+    api.start(opts).then(function (r) {
+      if (r && r.ok === false) addLog({ line: "Could not start: " + (r.error || "unknown error") });
+    });
   };
+
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="mode"]'), function (r) {
+    r.addEventListener("change", refreshAction);
+  });
+  $("newSession").addEventListener("change", refreshAction);
+  $("task").addEventListener("input", refreshAction);
   $("stop").onclick = function () { api.stop(); addLog({ line: "Stopped by user." }); };
   ["sBuffer", "sSmart", "sAuto"].forEach(function (id) {
     $(id).addEventListener("change", function () {
@@ -397,6 +473,8 @@
   api.onState(applyState);
   api.onLog(addLog);
   setInterval(function () { if (state.phase === "waiting" && wakeMs) renderStatus(); }, 1000);
+
+  refreshAction();
 
   loadAll().then(function () {
     if (DEMO) {
