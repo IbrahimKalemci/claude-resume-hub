@@ -23,7 +23,7 @@
     "build:bundle": "esbuild bin/cli.js --bundle --platform=node --target=node20 --format=cjs --outfile=dist/bundle.cjs",
     "build:exe": "node scripts/build-exe.js",
     "app:start": "electron app/main.js",
-    "app:build": "electron-builder --win portable"
+    "app:build": "node scripts/make-icon.js && electron-builder --win portable"
   },
   "keywords": [
     "claude",
@@ -65,7 +65,8 @@
       "package.json"
     ],
     "win": {
-      "target": "portable"
+      "target": "portable",
+      "icon": "build/icon.ico"
     },
     "portable": {
       "artifactName": "claude-resume-hub.exe"

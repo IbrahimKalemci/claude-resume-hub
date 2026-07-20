@@ -14,7 +14,7 @@ const fs = require("fs");
 
 const { AutoResumeEngine } = require("../lib/engine");
 const { listSessions, pickActiveSession, lastActiveProjectDir } = require("../lib/sessions");
-const { dotIcon } = require("./icon");
+const { appIcon, clockIcon } = require("./icon");
 
 const COLORS = {
   idle: "#8b93a7", starting: "#c96442", running: "#c96442",
@@ -54,7 +54,8 @@ function saveSettings() {
 // ---------------------------------------------------------------------------
 
 function trayImage(phase) {
-  return nativeImage.createFromBuffer(dotIcon(COLORS[phase] || COLORS.idle, 16));
+  // The clock mark in the phase colour: branded, and legible at 16px.
+  return nativeImage.createFromBuffer(clockIcon(COLORS[phase] || COLORS.idle, 16));
 }
 
 function refreshTray() {
@@ -93,7 +94,7 @@ function createWindow() {
     show: !settings.autoStart,
     backgroundColor: "#0b0e14",
     autoHideMenuBar: true,
-    icon: nativeImage.createFromBuffer(dotIcon("#c96442", 64)),
+    icon: nativeImage.createFromBuffer(appIcon(256)),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
