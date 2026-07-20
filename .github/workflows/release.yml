@@ -47,11 +47,11 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            asset: claude-resume-hub-windows-x64
+            asset: claude-resume-hub
           - os: macos-latest
-            asset: claude-resume-hub-macos-arm64
+            asset: claude-resume-hub-macos
           - os: ubuntu-latest
-            asset: claude-resume-hub-linux-x64
+            asset: claude-resume-hub-linux
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

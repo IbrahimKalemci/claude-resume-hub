@@ -13,6 +13,7 @@
   "files": [
     "bin",
     "lib",
+    "app",
     "README.md",
     "LICENSE"
   ],
@@ -20,7 +21,9 @@
     "start": "node bin/cli.js",
     "test": "node --test",
     "build:bundle": "esbuild bin/cli.js --bundle --platform=node --target=node20 --format=cjs --outfile=dist/bundle.cjs",
-    "build:exe": "node scripts/build-exe.js"
+    "build:exe": "node scripts/build-exe.js",
+    "app:start": "electron app/main.js",
+    "app:build": "electron-builder --win portable"
   },
   "keywords": [
     "claude",
@@ -45,6 +48,27 @@
   },
   "homepage": "https://github.com/IbrahimKalemci/claude-resume-hub#readme",
   "devDependencies": {
-    "esbuild": "^0.28.1"
+    "esbuild": "^0.28.1",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "main": "app/main.js",
+  "build": {
+    "appId": "com.ibrahimkalemci.claude-resume-hub",
+    "productName": "claude-resume-hub",
+    "directories": {
+      "output": "dist-app"
+    },
+    "files": [
+      "app/**/*",
+      "lib/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "portable"
+    },
+    "portable": {
+      "artifactName": "claude-resume-hub.exe"
+    }
   }
 }
