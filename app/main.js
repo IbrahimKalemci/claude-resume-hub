@@ -14,7 +14,12 @@ const fs = require("fs");
 
 const { AutoResumeEngine } = require("../lib/engine");
 const { listSessions, pickActiveSession, lastActiveProjectDir } = require("../lib/sessions");
+const { notifyRemote } = require("../lib/notify");
+const { checkUpdate } = require("../lib/update");
 const { appIcon } = require("./icon");
+
+const pkg = require("../package.json");
+let updateInfo = { available: false };
 
 const COLORS = {
   // idle is the brand terracotta (matches the taskbar icon) so the tray never
@@ -29,7 +34,10 @@ let engine = null;
 let quitting = false;
 
 let state = { phase: "idle", cycle: 0, maxCycles: 100, resetAt: null, wakeAt: null, message: "" };
-let settings = { dir: "", smart: true, buffer: 30, autoStart: false };
+let settings = {
+  dir: "", smart: true, buffer: 30, autoStart: false,
+  notify: { webhook: "", telegram: { botToken: "", chatId: "" } },
+};
 
 // ---------------------------------------------------------------------------
 // settings persistence
@@ -133,6 +141,8 @@ function pushState(patch) {
 
 function notify(title, body) {
   try { if (Notification.isSupported()) new Notification({ title, body }).show(); } catch { /* ignore */ }
+  // Fire-and-forget remote notification (phone) if the user configured one.
+  try { notifyRemote(settings.notify, title, body); } catch { /* ignore */ }
 }
 
 function startEngine(opts) {
@@ -168,6 +178,7 @@ function startEngine(opts) {
     }
   });
   engine.on("log", (line) => send("log", { t: new Date().toLocaleTimeString(), line }));
+  engine.on("output", (chunk) => send("output", chunk)); // Claude's live text output
 
   pushState({ phase: "starting", message: opts.task ? "Starting a new session…" : "Resuming session…" });
 
@@ -209,6 +220,13 @@ ipcMain.handle("chooseFolder", async () => {
 ipcMain.handle("start", (_e, opts) => startEngine(opts || {}));
 ipcMain.handle("stop", () => stopEngine());
 ipcMain.handle("openExternal", (_e, url) => shell.openExternal(url));
+ipcMain.handle("getUpdate", () => updateInfo);
+ipcMain.handle("testNotify", async (_e, cfg) => {
+  const res = await notifyRemote(cfg || settings.notify, "🔔 claude-resume-hub", "Test notification — it works!");
+  if (!res.length) return { ok: false, error: "no channel configured" };
+  const bad = res.find((r) => !r.ok);
+  return bad ? { ok: false, error: bad.error || ("HTTP " + bad.status) } : { ok: true };
+});
 
 // ---------------------------------------------------------------------------
 // lifecycle
@@ -226,6 +244,12 @@ if (!app.requestSingleInstanceLock()) {
     tray = new Tray(trayImage("idle"));
     tray.on("click", showWindow);
     refreshTray();
+
+    // Non-blocking update check (read-only, public GitHub API).
+    checkUpdate(pkg.version, "IbrahimKalemci/claude-resume-hub").then((r) => {
+      updateInfo = r || { available: false };
+      if (updateInfo.available) send("update", updateInfo);
+    });
 
     app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); else showWindow(); });
   });

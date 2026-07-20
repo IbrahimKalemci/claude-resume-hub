@@ -149,6 +149,13 @@
   </header>
 
   <main>
+    <!-- update banner -->
+    <a id="updateBanner" style="display:none;align-items:center;gap:8px;text-decoration:none;
+       background:rgba(201,100,66,.14);border:1px solid var(--accent);border-radius:11px;padding:9px 11px;
+       color:var(--txt);font-size:12px;cursor:pointer">
+      <span>⬆</span><span id="updateText" style="flex:1"></span><span style="color:var(--accent);font-weight:700">Download</span>
+    </a>
+
     <!-- settings -->
     <section class="card" id="settings">
       <h2>Settings</h2>
@@ -160,9 +167,25 @@
         <label for="sSmart">Smart resume by default</label>
         <label class="toggle"><input type="checkbox" id="sSmart" /><span class="switch"></span></label>
       </div>
-      <div class="field" style="margin-bottom:0">
+      <div class="field">
         <label for="sAuto">Start minimised to tray</label>
         <label class="toggle"><input type="checkbox" id="sAuto" /><span class="switch"></span></label>
+      </div>
+
+      <div style="border-top:1px solid var(--line);margin:4px 0 10px"></div>
+      <h2 style="margin-top:0">Phone / chat alerts <span class="faint" style="text-transform:none;letter-spacing:0;font-weight:400">— optional, outgoing only</span></h2>
+
+      <label class="field" style="flex-direction:column;align-items:stretch;gap:5px">
+        <span style="font-size:11px;color:var(--dim)">Webhook URL <span class="faint">(Discord / Slack / ntfy / any)</span></span>
+        <input type="text" id="nWebhook" placeholder="https://…" style="width:100%;background:#0a0d15;border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:6px 8px;font-size:11px;-webkit-user-select:text;user-select:text" />
+      </label>
+      <div class="field" style="gap:6px">
+        <input type="text" id="nTgToken" placeholder="Telegram bot token" style="flex:2;min-width:0;background:#0a0d15;border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:6px 8px;font-size:11px;-webkit-user-select:text;user-select:text" />
+        <input type="text" id="nTgChat" placeholder="chat id" style="flex:1;min-width:0;background:#0a0d15;border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:6px 8px;font-size:11px;-webkit-user-select:text;user-select:text" />
+      </div>
+      <div class="row" style="justify-content:space-between;margin-bottom:0">
+        <span class="faint" id="nTestResult" style="font-size:10.5px"></span>
+        <button class="btn" id="nTest">Send test</button>
       </div>
     </section>
 
@@ -362,8 +385,10 @@
     $("stop").disabled = !isBusy();
   }
 
+  var rawEl = null;
   function addLog(entry) {
     var box = $("log");
+    rawEl = null; // a log line breaks the current raw-output block
     var d = document.createElement("div");
     var t = document.createElement("span");
     t.className = "t"; t.textContent = entry.t || new Date().toLocaleTimeString();
@@ -371,7 +396,20 @@
     d.appendChild(document.createTextNode(entry.line));
     box.appendChild(d);
     box.scrollTop = box.scrollHeight;
-    while (box.childNodes.length > 300) box.removeChild(box.firstChild);
+    while (box.childNodes.length > 400) box.removeChild(box.firstChild);
+  }
+
+  // Claude's live text output — appended verbatim, coalesced between log lines.
+  function appendRaw(chunk) {
+    var box = $("log");
+    if (!rawEl) {
+      rawEl = document.createElement("div");
+      rawEl.style.color = "var(--txt)";
+      rawEl.style.opacity = ".92";
+      box.appendChild(rawEl);
+    }
+    rawEl.textContent += chunk;
+    box.scrollTop = box.scrollHeight;
   }
 
   function applyState(s) {
@@ -397,6 +435,11 @@
       $("sSmart").checked = !!settings.smart;
       $("sAuto").checked = !!settings.autoStart;
       $("smart").checked = !!settings.smart;
+      var n = settings.notify || (settings.notify = { webhook: "", telegram: { botToken: "", chatId: "" } });
+      if (!n.telegram) n.telegram = { botToken: "", chatId: "" };
+      $("nWebhook").value = n.webhook || "";
+      $("nTgToken").value = n.telegram.botToken || "";
+      $("nTgChat").value = n.telegram.chatId || "";
       return loadSessions();
     }).then(function () {
       return api.getState().then(applyState);
@@ -472,6 +515,12 @@
   $("newSession").addEventListener("change", refreshAction);
   $("task").addEventListener("input", refreshAction);
   $("stop").onclick = function () { api.stop(); addLog({ line: "Stopped by user." }); };
+  function collectNotify() {
+    return {
+      webhook: $("nWebhook").value.trim(),
+      telegram: { botToken: $("nTgToken").value.trim(), chatId: $("nTgChat").value.trim() },
+    };
+  }
   ["sBuffer", "sSmart", "sAuto"].forEach(function (id) {
     $(id).addEventListener("change", function () {
       settings.buffer = Number($("sBuffer").value) || 30;
@@ -481,9 +530,34 @@
       api.saveSettings(settings);
     });
   });
+  ["nWebhook", "nTgToken", "nTgChat"].forEach(function (id) {
+    $(id).addEventListener("change", function () {
+      settings.notify = collectNotify();
+      api.saveSettings(settings);
+    });
+  });
+  $("nTest").onclick = function () {
+    var out = $("nTestResult");
+    out.style.color = "var(--dim)"; out.textContent = "sending…";
+    api.testNotify(collectNotify()).then(function (r) {
+      if (r && r.ok) { out.style.color = "var(--ok)"; out.textContent = "sent ✓"; }
+      else { out.style.color = "var(--err)"; out.textContent = "failed: " + ((r && r.error) || "unknown"); }
+    });
+  };
 
   api.onState(applyState);
   api.onLog(addLog);
+  if (api.onOutput) api.onOutput(appendRaw);
+
+  function showUpdate(info) {
+    if (!info || !info.available) return;
+    $("updateText").textContent = "Update available — v" + info.latest + " (you have v" + info.current + ")";
+    var b = $("updateBanner");
+    b.style.display = "flex";
+    b.onclick = function () { if (info.url) (api.openExternal ? api.openExternal(info.url) : window.open(info.url)); };
+  }
+  if (api.onUpdate) api.onUpdate(showUpdate);
+  if (api.getUpdate) api.getUpdate().then(showUpdate);
   setInterval(function () { if (state.phase === "waiting" && wakeMs) renderStatus(); }, 1000);
 
   refreshAction();

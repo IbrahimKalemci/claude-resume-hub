@@ -16,7 +16,11 @@ contextBridge.exposeInMainWorld("api", {
   start: (opts) => ipcRenderer.invoke("start", opts),
   stop: () => ipcRenderer.invoke("stop"),
   openExternal: (url) => ipcRenderer.invoke("openExternal", url),
+  testNotify: (cfg) => ipcRenderer.invoke("testNotify", cfg),
+  getUpdate: () => ipcRenderer.invoke("getUpdate"),
 
   onState: (cb) => ipcRenderer.on("state", (_e, s) => cb(s)),
   onLog: (cb) => ipcRenderer.on("log", (_e, l) => cb(l)),
+  onOutput: (cb) => ipcRenderer.on("output", (_e, chunk) => cb(chunk)),
+  onUpdate: (cb) => ipcRenderer.on("update", (_e, info) => cb(info)),
 });
