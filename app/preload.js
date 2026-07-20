@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld("api", {
   chooseFolder: () => ipcRenderer.invoke("chooseFolder"),
   start: (opts) => ipcRenderer.invoke("start", opts),
   stop: () => ipcRenderer.invoke("stop"),
+  getQueue: () => ipcRenderer.invoke("getQueue"),
   openExternal: (url) => ipcRenderer.invoke("openExternal", url),
   testNotify: (cfg) => ipcRenderer.invoke("testNotify", cfg),
   getUpdate: () => ipcRenderer.invoke("getUpdate"),
@@ -23,4 +24,5 @@ contextBridge.exposeInMainWorld("api", {
   onLog: (cb) => ipcRenderer.on("log", (_e, l) => cb(l)),
   onOutput: (cb) => ipcRenderer.on("output", (_e, chunk) => cb(chunk)),
   onUpdate: (cb) => ipcRenderer.on("update", (_e, info) => cb(info)),
+  onQueue: (cb) => ipcRenderer.on("queue", (_e, q) => cb(q)),
 });

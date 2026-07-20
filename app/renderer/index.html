@@ -247,6 +247,16 @@
       </div>
     </section>
 
+    <!-- queue -->
+    <section class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:2px">
+        <h2 style="margin:0">Queue <span class="faint" style="text-transform:none;letter-spacing:0;font-weight:400">— run projects one after another</span></h2>
+        <button class="linklike" id="addQueue" style="padding:0">+ Add this project</button>
+      </div>
+      <div class="hint" id="queueHint" style="margin-top:2px">One account = one reset clock, so queued projects resume in order, not at once.</div>
+      <div class="slist" id="queueList" style="margin-top:8px"></div>
+    </section>
+
     <!-- log -->
     <section class="card">
       <h2>Activity</h2>
@@ -380,8 +390,9 @@
 
   function updateButtons() {
     var m = mode(), txt = $("task").value.trim(), isNew = $("newSession").checked;
-    // "Give it a task" needs text before you can start.
-    $("start").disabled = isBusy() || (m === "task" && !isNew && !txt);
+    var queued = (typeof queue !== "undefined" && queue.length);
+    // In single mode, "Give it a task" needs text; when a queue exists, just run it.
+    $("start").disabled = isBusy() || (!queued && m === "task" && !isNew && !txt);
     $("stop").disabled = !isBusy();
   }
 
@@ -484,30 +495,74 @@
     updateButtons();
   }
 
-  $("start").onclick = function () {
+  function baseName(p) { return (p || "").replace(/[\\/]+$/, "").split(/[\\/]/).pop() || p; }
+
+  // The job described by the current Project + action controls.
+  function currentJob() {
     var m = mode(), isNew = $("newSession").checked, txt = $("task").value.trim();
-    var opts = {
+    var j = {
       dir: settings.dir, smart: $("smart").checked, buffer: Number($("sBuffer").value) || 30,
-      sessionId: null, task: null, prompt: "continue",
+      sessionId: null, task: null, prompt: "continue", label: baseName(settings.dir), status: "queued",
     };
+    if (isNew) j.task = txt || "continue";
+    else if (m === "task") { j.sessionId = selectedId; j.prompt = txt; }
+    else { j.sessionId = selectedId; j.prompt = "continue"; }
+    return j;
+  }
 
-    if (isNew) {
-      opts.task = txt || "continue";
-      addLog({ line: "Starting a NEW session…" });
-    } else if (m === "task") {
-      opts.sessionId = selectedId;
-      opts.prompt = txt;                    // same session, your own instruction
-      addLog({ line: "Sending your task to " + short(selectedId || "") + "…" });
-    } else {
-      opts.sessionId = selectedId;
-      opts.prompt = "continue";             // same session, plain continue
-      addLog({ line: "Resuming " + short(selectedId || "") + "…" });
+  var queue = [];
+  function renderQueue() {
+    var list = $("queueList");
+    list.innerHTML = "";
+    queue.forEach(function (j, i) {
+      var color = j.status === "done" ? "var(--ok)" : j.status === "error" ? "var(--err)"
+        : j.status === "running" ? "var(--accent)" : "var(--faint)";
+      var row = document.createElement("div");
+      row.className = "srow";
+      row.innerHTML =
+        '<span class="dot" style="background:' + color + '"></span>' +
+        '<div class="txt"><div class="t1 ellipsis">' + j.label + "</div>" +
+        '<div class="t2 ellipsis">' + (j.task ? "new: " + j.task.slice(0, 30) : j.prompt === "continue" ? "continue" : "task: " + j.prompt.slice(0, 30)) +
+        " · " + (j.status || "queued") + "</div></div>";
+      if (!isBusy()) {
+        var x = document.createElement("button");
+        x.className = "linklike"; x.textContent = "✕"; x.style.color = "var(--faint)";
+        x.onclick = function () { queue.splice(i, 1); renderQueue(); updateButtons(); };
+        row.appendChild(x);
+      }
+      list.appendChild(row);
+    });
+    $("queueList").style.display = queue.length ? "flex" : "none";
+    $("start").textContent = queue.length ? "Start queue (" + queue.length + ")" : "Start";
+  }
+
+  $("addQueue").onclick = function () {
+    if (!settings.dir) return;
+    queue.push(currentJob());
+    renderQueue(); updateButtons();
+    addLog({ line: "Added to queue: " + baseName(settings.dir) });
+  };
+
+  $("start").onclick = function () {
+    if (queue.length) {
+      addLog({ line: "Starting queue of " + queue.length + " project(s)…" });
+      api.start({ jobs: queue }).then(function (r) {
+        if (r && r.ok === false) addLog({ line: "Could not start: " + (r.error || "unknown error") });
+      });
+      return;
     }
-
-    api.start(opts).then(function (r) {
+    var j = currentJob();
+    addLog({ line: j.task ? "Starting a NEW session…" : (mode() === "task" ? "Sending your task…" : "Resuming " + short(selectedId || "") + "…") });
+    api.start(j).then(function (r) {
       if (r && r.ok === false) addLog({ line: "Could not start: " + (r.error || "unknown error") });
     });
   };
+
+  if (api.onQueue) api.onQueue(function (q) {
+    // main-process queue carries live statuses in the same order
+    q.forEach(function (mj, i) { if (queue[i]) queue[i].status = mj.status; });
+    renderQueue();
+  });
 
   Array.prototype.forEach.call(document.querySelectorAll('input[name="mode"]'), function (r) {
     r.addEventListener("change", refreshAction);
@@ -561,6 +616,7 @@
   setInterval(function () { if (state.phase === "waiting" && wakeMs) renderStatus(); }, 1000);
 
   refreshAction();
+  renderQueue();
 
   loadAll().then(function () {
     if (DEMO) {

@@ -3,6 +3,23 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.5.0] — 2026-07-20
+
+### Added (desktop app)
+- **Phone / chat alerts** — optional outgoing notifications to a webhook
+  (Discord/Slack/ntfy/any) and/or your own Telegram bot on limit / resume / done /
+  error, with a "Send test" button. Outgoing only; still reads no credentials.
+- **Multi-project queue** — add several projects and they resume **sequentially**
+  on the single account-level reset clock (parallel would just re-burn the reset
+  budget). Per-project status in the UI.
+- **Live Claude output** — the app streams Claude's actual text into the Activity
+  log, so you can see what it did (including while you were away).
+- **Update banner** — a read-only GitHub Releases check shows a "Download" banner
+  when a newer version exists (no auto-install, no auth).
+- Decision recorded: usage-% bars for other accounts are intentionally NOT added —
+  there's no token-free source, and reading the OAuth token would break the audited
+  "never reads your tokens" promise. Surfaced that promise as a shield in the UI.
+
 ## [1.4.2] — 2026-07-20
 
 ### Changed

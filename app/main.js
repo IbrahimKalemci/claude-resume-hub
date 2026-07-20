@@ -79,7 +79,7 @@ function refreshTray() {
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: "Show window", click: showWindow },
     { type: "separator" },
-    { label: busy() ? "Stop" : "Start", click: () => (busy() ? stopEngine() : startEngine({})) },
+    { label: busy() ? "Stop" : "Start", click: () => (busy() ? stopEngine() : startJobs([buildJob({})])) },
     { type: "separator" },
     { label: "Quit", click: () => { quitting = true; app.quit(); } },
   ]));
@@ -145,54 +145,95 @@ function notify(title, body) {
   try { notifyRemote(settings.notify, title, body); } catch { /* ignore */ }
 }
 
-function startEngine(opts) {
-  if (engine) return { ok: false, error: "already running" };
+// A queue of projects, processed SEQUENTIALLY. Usage limits are account-level
+// (one reset clock for everything), so running projects in parallel would just
+// re-burn the freshly-reset budget and re-trip the limit — one at a time is correct.
+let queue = [];
+let qIndex = -1;
+let stopped = false;
 
+function jobLabel(dir) { try { return path.basename(dir) || dir; } catch { return dir; } }
+
+function buildJob(opts) {
   const dir = opts.dir || settings.dir;
-  if (!dir || !fs.existsSync(dir)) return { ok: false, error: "project folder not found" };
-
   // No task -> resume the chosen (or newest) session. A task -> new session.
-  let sessionId = opts.task ? null : (opts.sessionId || (pickActiveSession(dir) || {}).id || null);
-
-  engine = new AutoResumeEngine({
+  const sessionId = opts.task ? null : (opts.sessionId || (pickActiveSession(dir) || {}).id || null);
+  return {
+    dir,
+    sessionId,
     prompt: opts.prompt || "continue",
     task: opts.task || null,
-    session: sessionId,
-    dir,
+    smart: !!opts.smart,
     buffer: Number(opts.buffer) || settings.buffer || 30,
-    poll: 5,
-    maxCycles: 100,
-    verbose: false,
-    passthrough: [],
-  });
+    label: opts.label || jobLabel(dir),
+    status: "queued",
+  };
+}
 
-  let last = state.phase;
-  engine.on("state", (s) => {
-    pushState(s);
-    if (s.phase !== last) {
-      if (s.phase === "waiting") notify("⏳ Usage limit hit", s.message || "Waiting for the reset");
-      if (s.phase === "running" && last === "waiting") notify("▶ Limit reset — resumed", "Claude is continuing your task.");
-      if (s.phase === "done") notify("✅ Task complete", s.message || "All done.");
-      if (s.phase === "error") notify("⚠ Stopped", s.message || "An error occurred.");
-      last = s.phase;
-    }
-  });
-  engine.on("log", (line) => send("log", { t: new Date().toLocaleTimeString(), line }));
-  engine.on("output", (chunk) => send("output", chunk)); // Claude's live text output
-
-  pushState({ phase: "starting", message: opts.task ? "Starting a new session…" : "Resuming session…" });
-
-  engine.run()
-    .then((r) => { engine = null; pushState({ phase: r && r.ok ? "done" : "error" }); })
-    .catch((e) => { engine = null; pushState({ phase: "error", message: String(e && e.message || e) }); });
-
+function startJobs(jobs) {
+  if (engine) return { ok: false, error: "already running" };
+  const valid = (jobs || []).filter((j) => j && j.dir && fs.existsSync(j.dir));
+  if (!valid.length) return { ok: false, error: "no valid project folder" };
+  queue = valid;
+  qIndex = -1;
+  stopped = false;
+  send("queue", queue);
+  runNext();
   return { ok: true };
 }
 
+function runNext() {
+  if (stopped) return;
+  qIndex++;
+  if (qIndex >= queue.length) {
+    send("queue", queue);
+    pushState({ phase: "done", message: queue.length > 1 ? "All projects done." : "Task complete.", queueIndex: qIndex, queueTotal: queue.length });
+    return;
+  }
+  const job = queue[qIndex];
+  job.status = "running";
+  send("queue", queue);
+
+  engine = new AutoResumeEngine({
+    prompt: job.prompt, task: job.task, session: job.sessionId, dir: job.dir,
+    buffer: job.buffer, poll: 5, maxCycles: 100, verbose: false, passthrough: [],
+  });
+
+  const prefix = queue.length > 1 ? `[${qIndex + 1}/${queue.length}] ${job.label}: ` : "";
+  let last = state.phase;
+  engine.on("state", (s) => {
+    pushState(Object.assign({}, s, { queueIndex: qIndex, queueTotal: queue.length, project: job.label }));
+    if (s.phase !== last) {
+      if (s.phase === "waiting") notify("⏳ Usage limit hit", prefix + (s.message || "Waiting for the reset"));
+      if (s.phase === "running" && last === "waiting") notify("▶ Limit reset — resumed", job.label);
+      last = s.phase;
+    }
+  });
+  engine.on("log", (line) => send("log", { t: new Date().toLocaleTimeString(), line: prefix + line }));
+  engine.on("output", (chunk) => send("output", chunk));
+
+  pushState({
+    phase: "starting",
+    message: prefix + (job.task ? "Starting a new session…" : "Resuming session…"),
+    queueIndex: qIndex, queueTotal: queue.length, project: job.label,
+  });
+
+  engine.run()
+    .then((r) => {
+      engine = null;
+      job.status = r && r.ok ? "done" : "error";
+      send("queue", queue);
+      notify(r && r.ok ? "✅ Done" : "⚠ Stopped", job.label);
+      runNext(); // continue the queue regardless
+    })
+    .catch(() => { engine = null; job.status = "error"; send("queue", queue); runNext(); });
+}
+
 function stopEngine() {
-  if (!engine) return;
-  try { engine.stop(); } catch { /* ignore */ }
-  engine = null;
+  stopped = true;
+  if (engine) { try { engine.stop(); } catch { /* ignore */ } engine = null; }
+  queue.forEach((j) => { if (j.status === "running" || j.status === "queued") j.status = "stopped"; });
+  send("queue", queue);
   pushState({ phase: "idle", message: "Stopped.", resetAt: null, wakeAt: null });
 }
 
@@ -217,8 +258,15 @@ ipcMain.handle("chooseFolder", async () => {
   saveSettings();
   return settings.dir;
 });
-ipcMain.handle("start", (_e, opts) => startEngine(opts || {}));
+ipcMain.handle("start", (_e, opts) => {
+  opts = opts || {};
+  const jobs = (opts.jobs && opts.jobs.length)
+    ? opts.jobs.map((j) => buildJob(j))
+    : [buildJob(opts)];
+  return startJobs(jobs);
+});
 ipcMain.handle("stop", () => stopEngine());
+ipcMain.handle("getQueue", () => queue);
 ipcMain.handle("openExternal", (_e, url) => shell.openExternal(url));
 ipcMain.handle("getUpdate", () => updateInfo);
 ipcMain.handle("testNotify", async (_e, cfg) => {
