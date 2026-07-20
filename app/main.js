@@ -223,8 +223,15 @@ function runNext() {
       engine = null;
       job.status = r && r.ok ? "done" : "error";
       send("queue", queue);
-      notify(r && r.ok ? "✅ Done" : "⚠ Stopped", job.label);
-      runNext(); // continue the queue regardless
+      if (r && r.ok) { notify("✅ Done", job.label); return runNext(); }
+      // An auth failure hits every project the same way — stop the whole queue.
+      if (r && r.reason === "auth") {
+        stopped = true;
+        notify("🔑 Sign-in needed", state.message || "Run `claude login`, then start again.");
+        return;
+      }
+      notify("⚠ " + job.label, state.message || "Stopped");
+      runNext(); // other errors: skip to the next project
     })
     .catch(() => { engine = null; job.status = "error"; send("queue", queue); runNext(); });
 }

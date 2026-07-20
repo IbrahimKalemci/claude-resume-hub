@@ -16,6 +16,11 @@ This project adheres to [Semantic Versioning](https://semver.org/).
   log, so you can see what it did (including while you were away).
 - **Update banner** — a read-only GitHub Releases check shows a "Download" banner
   when a newer version exists (no auto-install, no auth).
+- **Fix:** an auth failure ("Authentication failed / sign in again") that Claude
+  Code can print while still exiting 0 was being reported as a successful "task
+  complete". It's now detected and surfaced as a clear error — "run `claude login`,
+  then start again" — with a notification; in a queue it stops all projects (the
+  same account auth is broken for every one).
 - Decision recorded: usage-% bars for other accounts are intentionally NOT added —
   there's no token-free source, and reading the OAuth token would break the audited
   "never reads your tokens" promise. Surfaced that promise as a shield in the UI.

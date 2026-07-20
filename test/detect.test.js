@@ -2,7 +2,7 @@
 const test = require("node:test");
 const assert = require("node:assert");
 const path = require("node:path");
-const { detectLimit, parseClockTime, fmtDuration } = require("../lib/detect.js");
+const { detectLimit, detectAuthError, parseClockTime, fmtDuration } = require("../lib/detect.js");
 const { buildClaudeArgs } = require("../lib/engine.js");
 const { encodeDir, listSessions, lastAssistantText, pickActiveSession } = require("../lib/sessions.js");
 const { PS_SCRIPT, startTray } = require("../lib/tray.js");
@@ -54,6 +54,16 @@ test("limit phrase without a time -> hit but no resetAt", () => {
 test("normal successful output -> not a limit", () => {
   const r = detectLimit("Done. All 12 tests passed. Committed the change.");
   assert.equal(r.hit, false);
+});
+
+test("detectAuthError catches an auth failure (even alongside 'continue')", () => {
+  assert.ok(detectAuthError("Authentication failed. Sign in again to continue."));
+  assert.ok(detectAuthError("Please run `claude login` to continue"));
+});
+
+test("detectAuthError ignores normal + limit output", () => {
+  assert.equal(detectAuthError("Done. All tests passed."), null);
+  assert.equal(detectAuthError("Claude AI usage limit reached|1784376612"), null);
 });
 
 test("parseClockTime: a reset time just barely past -> resume now (deterministic clock)", () => {
