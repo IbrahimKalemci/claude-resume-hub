@@ -1,137 +1,122 @@
-<h1 align="center">⏰ claude-resume-hub</h1>
+<div align="center">
 
-<p align="center">
-  <b>Stop babysitting Claude Code usage limits.</b><br>
-  Hit a limit at 2am? <b>Wake up to finished work.</b>
-</p>
+<img src="https://raw.githubusercontent.com/IbrahimKalemci/claude-resume-hub/main/docs/icon.png" width="84" alt="claude-resume-hub logo">
 
-<p align="center">
-  <a href="https://www.npmjs.com/package/claude-resume-hub"><img src="https://img.shields.io/npm/v/claude-resume-hub?color=c96442" alt="npm"></a>
+# claude-resume-hub
+
+### Hit a Claude Code limit at 2am? **Wake up to finished work.**
+
+Auto-continues your Claude Code session the moment a usage/session limit resets — as a **tray desktop app** or a one-line **CLI**. Cross-platform, zero-dependency, and it **never touches your tokens**.
+
+<p>
+  <a href="https://www.npmjs.com/package/claude-resume-hub"><img src="https://img.shields.io/npm/v/claude-resume-hub?color=c96442&label=npm" alt="npm"></a>
   <a href="https://github.com/IbrahimKalemci/claude-resume-hub/actions/workflows/ci.yml"><img src="https://github.com/IbrahimKalemci/claude-resume-hub/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/node-%3E%3D16-3fb950" alt="node >= 16">
+  <a href="https://github.com/IbrahimKalemci/claude-resume-hub/releases/latest"><img src="https://img.shields.io/badge/download-.exe-3fb950" alt="download"></a>
   <img src="https://img.shields.io/badge/Windows%20%7C%20macOS%20%7C%20Linux-8b93a7" alt="platforms">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT"></a>
 </p>
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/IbrahimKalemci/claude-resume-hub/main/docs/demo.svg" alt="countdown reaching zero, then sending continue to Claude to resume the task" width="700">
-</p>
+<img src="https://raw.githubusercontent.com/IbrahimKalemci/claude-resume-hub/main/docs/app-demo.svg" width="380" alt="claude-resume-hub desktop app: finds your session, waits out the limit, counts down, resumes automatically">
 
-<p align="center"><b>🇬🇧 <a href="#-english">English</a> &nbsp;·&nbsp; 🇹🇷 <a href="#-türkçe">Türkçe</a></b></p>
+**🇬🇧 [English](#-english) · 🇹🇷 [Türkçe](#-türkçe)**
+
+</div>
 
 ---
 
 ## 🇬🇧 English
 
-Claude Code hits your limit and just… **stops** — until you come back and type `continue`.
-**claude-resume-hub** waits for the exact reset time and continues **for you**, then pings your desktop when it's rolling again. One command, zero setup, every OS.
+When Claude Code hits your limit it prints `Claude AI usage limit reached|…` and **stops** — you have to come back and type `continue`. **claude-resume-hub** finds your session, waits for the exact reset time, and continues for you. Then it pings you.
 
-### Install & run — 3 steps
+### 🖥️ Desktop app — download & run
 
-**1.** Make sure Claude Code works (open a terminal, type `claude --version`). Don't have it? [Get it here](https://docs.claude.com/en/docs/claude-code).
+The tray app finds your last session automatically, shows a live countdown, and resumes on its own. No terminal.
 
-**2.** Go to your project folder and run:
+**[⬇ Download claude-resume-hub.exe](https://github.com/IbrahimKalemci/claude-resume-hub/releases/latest)** (Windows · macOS · Linux)
 
-```bash
-npx claude-resume-hub --web
-```
+1. Download and run it — it lives in your **system tray**.
+2. It **auto-finds** the session you were last working in.
+3. Pick **Continue** (or type a task), press **Start**, and walk away.
+4. Limit hit → it counts down → resumes the moment the window reopens → you get a notification. 🎉
 
-**3.** A dashboard opens in your browser — click **“Enable alerts”**, then walk away. 🎉
+> It wraps Claude Code, so the `claude` CLI must be on your PATH.
 
-That's it. No install, no config. It works on **Windows, macOS and Linux**.
-
-### Why you'll love it
-
-- ⏱️ **Exact countdown** — reads the real reset time, not a guess
-- 🔔 **Desktop alerts** — close the terminal, go live your life
-- 🖥️ **Beautiful live dashboard** — countdown, status, and a streaming log
-- 🪶 **Zero dependencies**, 100% local — nothing leaves your machine
-
-### Handy commands
+### ⌨️ Prefer the terminal? One line, no install
 
 ```bash
-npx claude-resume-hub              # no dashboard, just auto-resume
-npx claude-resume-hub --web        # with dashboard + alerts
-npx claude-resume-hub --tray       # background system-tray icon (Windows)
-npx claude-resume-hub -t "run all tests and fix failures"   # start a NEW session (not resume)
-npx claude-resume-hub --list       # list this project's sessions (+ their ids)
-npx claude-resume-hub --web --smart # context-aware resume (picks up your last step)
-npx claude-resume-hub -s <id>      # resume a specific session
-npx claude-resume-hub --help       # all options
+npx claude-resume-hub --web      # auto-resume + a live dashboard
+npx claude-resume-hub            # ...or headless, no dashboard
 ```
 
-Prefer a permanent command? `npm i -g claude-resume-hub` gives you `crh --web`.
-**Always up to date:** `npx claude-resume-hub@latest` pulls the newest version automatically.
-**No Node?** [**⬇ Download a standalone binary**](https://github.com/IbrahimKalemci/claude-resume-hub/releases/latest) (Windows `.exe` / macOS / Linux) — runs without Node installed. It still needs the `claude` CLI on your PATH.
+Handy flags: `--list` (see your sessions) · `--session <id>` (resume a specific one) · `--smart` (context-aware resume) · `--tray` (Windows tray) · `--help`.
+
+### ✨ Features
+
+- ⏱️ **Exact countdown** — reads the real reset timestamp, not a guess
+- 🎯 **Finds the right session** and pins it (no more resuming the wrong one)
+- 📚 **Multi-project queue** — several projects resume in order on one reset clock
+- 🔔 **Phone/chat alerts** — optional webhook or Telegram ping on reset / done / error
+- 📺 **Live output** — watch what Claude did, even while you were away
+- ⬆️ **Update banner** — tells you when a newer version ships
+- 🪶 **Zero dependencies**, ~one small package · 🔒 **never reads your tokens**
+
+### 🔒 Security & privacy
+
+It **never** reads or stores your Claude credentials (`~/.claude/.credentials.json` / keychain). It only reads your own conversation transcripts under `~/.claude/projects`, locally. No telemetry; the dashboard is localhost-only; release binaries are built by CI from source on clean machines, so a downloaded `.exe` carries no one's data.
 
 ---
 
 ## 🇹🇷 Türkçe
 
-Claude Code limitine takılınca **durur** — sen gelip `continue` yazana kadar bekler.
-**claude-resume-hub** limitin tam açılma saatini bekleyip **senin yerine** devam eder, iş yeniden başlayınca da masaüstüne bildirim atar. Tek komut, sıfır ayar, her işletim sistemi.
+Claude Code limitine takılınca `Claude AI usage limit reached|…` yazıp **durur** — gelip `continue` yazman gerekir. **claude-resume-hub** oturumunu bulur, tam açılma saatini bekler ve senin yerine devam eder. Sonra da sana haber verir.
 
-### Kurulum & çalıştırma — 3 adım
+### 🖥️ Masaüstü uygulaması — indir çalıştır
 
-**1.** Claude Code çalışıyor mu bak (terminal aç, `claude --version` yaz). Yoksa [buradan kur](https://docs.claude.com/en/docs/claude-code).
+Tepside duran uygulama son oturumunu otomatik bulur, canlı geri sayım gösterir, kendi devam eder. Terminal yok.
 
-**2.** Projenin klasörüne gir ve şunu çalıştır:
+**[⬇ claude-resume-hub.exe indir](https://github.com/IbrahimKalemci/claude-resume-hub/releases/latest)** (Windows · macOS · Linux)
 
-```bash
-npx claude-resume-hub --web
-```
+1. İndir ve çalıştır — **sistem tepsisinde** yaşar.
+2. Son çalıştığın oturumu **kendi bulur**.
+3. **Continue** seç (ya da task yaz), **Start**'a bas, işine bak.
+4. Limit dolunca → geri sayar → açılır açılmaz devam eder → bildirim alırsın. 🎉
 
-**3.** Tarayıcıda bir panel açılır — **“Enable alerts”**e bas ve arkana yaslan. 🎉
+> Claude Code'u sarmalar; `claude` CLI'ın PATH'te olması gerekir.
 
-Hepsi bu. Kurulum yok, ayar yok. **Windows, macOS ve Linux**'ta çalışır.
-
-### Neden bayılacaksın
-
-- ⏱️ **Net geri sayım** — tahmin değil, gerçek reset saatini okur
-- 🔔 **Masaüstü bildirimi** — terminali kapat, hayatına dön
-- 🖥️ **Şık canlı panel** — geri sayım, durum ve canlı log
-- 🪶 **Sıfır bağımlılık**, %100 yerel — hiçbir veri makineden çıkmaz
-
-### İşine yarayacak komutlar
+### ⌨️ Terminal mi? Tek satır, kurulum yok
 
 ```bash
-npx claude-resume-hub              # panelsiz, sadece otomatik devam
-npx claude-resume-hub --web        # panel + bildirim
-npx claude-resume-hub --tray       # arka planda sistem tepsisi ikonu (Windows)
-npx claude-resume-hub -t "tüm testleri çalıştır ve hataları düzelt"   # YENİ session başlat (devam DEĞİL)
-npx claude-resume-hub --list       # bu projenin session'larını listele (+ id'leri)
-npx claude-resume-hub --web --smart # bağlam-farkında devam (kaldığın adımdan sürer)
-npx claude-resume-hub -s <id>      # belirli bir session'ı devam ettir
-npx claude-resume-hub --help       # tüm seçenekler
+npx claude-resume-hub --web      # otomatik devam + canlı panel
+npx claude-resume-hub            # ...ya da panelsiz
 ```
 
-Kalıcı komut ister misin? `npm i -g claude-resume-hub` sana `crh --web` verir.
-**Hep güncel:** `npx claude-resume-hub@latest` otomatik en yeni sürümü çeker.
-**Node yok mu?** [**⬇ Standalone binary indir**](https://github.com/IbrahimKalemci/claude-resume-hub/releases/latest) (Windows `.exe` / macOS / Linux) — Node kurulu olmadan çalışır. Yine de `claude` CLI'ın PATH'te olması gerekir.
+İşe yarayan bayraklar: `--list` (oturumları gör) · `--session <id>` (belirli oturum) · `--smart` (bağlam-farkında devam) · `--tray` (Windows tepsi) · `--help`.
+
+### ✨ Özellikler
+
+- ⏱️ **Net geri sayım** — tahmin değil, gerçek reset zamanını okur
+- 🎯 **Doğru oturumu bulur** ve sabitler (yanlış oturumu devam ettirme derdi yok)
+- 📚 **Çoklu proje kuyruğu** — birden fazla proje tek reset saatinde sırayla devam eder
+- 🔔 **Telefon/sohbet bildirimi** — webhook ya da Telegram ile reset/bitiş/hata bildirimi
+- 📺 **Canlı çıktı** — Claude ne yaptı, sen yokken bile gör
+- ⬆️ **Güncelleme banner'ı** — yeni sürüm çıkınca söyler
+- 🪶 **Sıfır bağımlılık** · 🔒 **token'ına asla dokunmaz**
+
+### 🔒 Güvenlik & gizlilik
+
+Claude kimlik bilgilerini (`~/.claude/.credentials.json` / keychain) **asla** okumaz/saklamaz. Sadece kendi makinendeki `~/.claude/projects` konuşma metinlerini okur. Telemetri yok; panel yalnızca localhost; release binary'leri CI'da temiz sunucularda kaynaktan derlenir — indirilen `.exe` kimsenin verisini taşımaz.
 
 ---
 
-## 🔒 Security & privacy
-
-- **It never touches your tokens.** The tool does **not** read or store your Claude credentials (`~/.claude/.credentials.json` / the OS keychain). It only reads conversation transcripts under `~/.claude/projects` — on your own machine, at runtime.
-- **Nothing leaves your machine.** No telemetry, no network calls of its own. The `--web` dashboard is localhost-only.
-- **The binary contains only code — no sessions, no tokens.** Release executables are built by GitHub Actions from source on clean runners, so a downloaded `.exe` can't expose anyone's data (there's none embedded). Each user's run reads only *their own* local `~/.claude`.
-
-> **Güvenlik:** Token/kimlik bilgisi *hiç* okunmaz veya saklanmaz — sadece kendi makinendeki konuşma metinleri okunur. Panel yalnızca localhost. İndirilen `.exe` yalnızca kod içerir (session/token gömülü değil), CI'da kaynaktan temiz sunucularda derlenir.
-
 ## 🛠️ From source · Kaynaktan
-
-Prefer to run it straight from the repo (no npm)? / npm'siz, doğrudan repodan mı çalıştırmak istiyorsun?
 
 ```bash
 git clone https://github.com/IbrahimKalemci/claude-resume-hub.git
 cd claude-resume-hub
-node bin/cli.js --web
+npm start          # CLI
+npm run app:start  # desktop app (needs: npm install)
 ```
 
----
-
-<p align="center">
-  Made for everyone who's tired of waiting on the reset clock.<br>
-  <b>MIT</b> © Ibrahim Kalemci · <a href="CHANGELOG.md">Changelog</a>
-</p>
+<div align="center">
+<sub>Made for everyone tired of waiting on the reset clock · <b>MIT</b> © Ibrahim Kalemci · <a href="CHANGELOG.md">Changelog</a></sub>
+</div>

@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 548" width="440" height="548"
+     font-family="ui-sans-serif,system-ui,Segoe UI,Roboto,sans-serif">
+  <defs>
+    <linearGradient id="win" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0e1526"/><stop offset="0.5" stop-color="#0b0e14"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#131826"/><stop offset="1" stop-color="#0f1420"/>
+    </linearGradient>
+  </defs>
+
+  <!-- window -->
+  <rect x="2" y="2" width="436" height="544" rx="14" fill="url(#win)" stroke="#232a3d"/>
+  <!-- title bar -->
+  <text x="20" y="26" fill="#8b93a7" font-size="11.5" font-weight="600">claude-resume-hub</text>
+  <g opacity="0.9">
+    <path d="M389 21h6" stroke="#5a627a" stroke-width="1.4"/><rect x="404" y="18.5" width="6" height="6" rx="1" fill="none" stroke="#5a627a" stroke-width="1.2"/><path d="M418 18l6 6M424 18l-6 6" stroke="#5a627a" stroke-width="1.4"/>
+  </g>
+  <line x1="2" y1="40" x2="438" y2="40" stroke="#1a2030"/>
+
+  <!-- header -->
+  <circle cx="30" cy="64" r="12" fill="#c96442"/>
+  <circle cx="30" cy="64" r="7" fill="none" stroke="#f6efe8" stroke-width="1.6"/>
+  <path d="M30 59.5V64l3.4 2" fill="none" stroke="#f6efe8" stroke-width="1.7" stroke-linecap="round"/>
+  <text x="50" y="69" fill="#e6e9f0" font-size="15" font-weight="700">claude-resume-hub</text>
+
+  <!-- phase pills (swap) -->
+  <g><rect x="352" y="53" width="56" height="22" rx="11" fill="none" stroke="#8b93a7"/><text x="380" y="68" fill="#8b93a7" font-size="11" font-weight="700" text-anchor="middle">IDLE</text>
+    <animate attributeName="opacity" dur="8s" repeatCount="indefinite" values="1;1;0;0" keyTimes="0;0.1875;0.1915;1"/></g>
+  <g><rect x="342" y="53" width="66" height="22" rx="11" fill="none" stroke="#c96442"/><text x="375" y="68" fill="#c96442" font-size="11" font-weight="700" text-anchor="middle">RUNNING</text>
+    <animate attributeName="opacity" dur="8s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.1875;0.1915;0.375;0.379;1"/></g>
+  <g><rect x="346" y="53" width="62" height="22" rx="11" fill="none" stroke="#d29922"/><text x="377" y="68" fill="#d29922" font-size="11" font-weight="700" text-anchor="middle">WAITING</text>
+    <animate attributeName="opacity" dur="8s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.375;0.379;0.8125;0.8165;1"/></g>
+  <g><rect x="356" y="53" width="52" height="22" rx="11" fill="none" stroke="#3fb950"/><text x="382" y="68" fill="#3fb950" font-size="11" font-weight="700" text-anchor="middle">DONE</text>
+    <animate attributeName="opacity" dur="8s" repeatCount="indefinite" values="0;0;1;1" keyTimes="0;0.8125;0.8165;1"/></g>
+
+  <!-- PROJECT card -->
+  <rect x="16" y="86" width="408" height="96" rx="12" fill="url(#card)" stroke="#232a3d"/>
+  <text x="30" y="108" fill="#8b93a7" font-size="10.5" letter-spacing="1.1" font-weight="700">PROJECT</text>
+  <text x="30" y="126" fill="#8b93a7" font-size="11.5" font-family="ui-monospace,Menlo,monospace">C:\Users\you\Desktop\my-project</text>
+  <rect x="30" y="136" width="380" height="38" rx="9" fill="#0c1018" stroke="#1c2436"/>
+  <text x="42" y="152" fill="#3fb950" font-size="11" font-family="ui-monospace,Menlo,monospace">384d594d-f53e-4831-bafe-c34bb9307984</text>
+  <text x="42" y="167" fill="#5a627a" font-size="10.5">last activity 15:04 · 75 prompts · found automatically</text>
+
+  <!-- STATUS card -->
+  <rect x="16" y="192" width="408" height="150" rx="12" fill="url(#card)" stroke="#232a3d"/>
+  <!-- label: STATUS (not waiting) / RESUMING IN (waiting) -->
+  <text x="220" y="222" fill="#8b93a7" font-size="11" letter-spacing="1.4" text-anchor="middle">STATUS
+    <animate attributeName="opacity" dur="8s" repeatCount="indefinite" values="1;1;0;0;1;1" keyTimes="0;0.375;0.379;0.8125;0.8165;1"/></text>
+  <text x="220" y="222" fill="#d29922" font-size="11" letter-spacing="1.4" text-anchor="middle">RESUMING IN
+    <animate attributeName="opacity" dur="8s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.375;0.379;0.8125;0.8165;1"/></text>
+
+  <!-- big value -->
+  <g text-anchor="middle" font-family="ui-monospace,Menlo,monospace">
+    <text x="220" y="286" fill="#8b93a7" font-size="34" font-weight="800">—
+      <animate attributeName="opacity" dur="8s" repeatCount="indefinite" values="1;1;0;0" keyTimes="0;0.1875;0.1915;1"/></text>
+    <text x="220" y="288" fill="#c96442" font-size="40" font-weight="800">▶
+      <animate attributeName="opacity" dur="8s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.1875;0.1915;0.375;0.379;1"/></text>
+    <text x="220" y="284" fill="#e6e9f0" font-size="38" font-weight="800">00:00:03
+      <animate attributeName="opacity" dur="8s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.375;0.379;0.484;0.488;1"/></text>
+    <text x="220" y="284" fill="#e6e9f0" font-size="38" font-weight="800">00:00:02
+      <animate attributeName="opacity" dur="8s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.484;0.488;0.594;0.598;1"/></text>
+    <text x="220" y="284" fill="#e6e9f0" font-size="38" font-weight="800">00:00:01
+      <animate attributeName="opacity" dur="8s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.594;0.598;0.703;0.707;1"/></text>
+    <text x="220" y="284" fill="#3fb950" font-size="38" font-weight="800">00:00:00
+      <animate attributeName="opacity" dur="8s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.703;0.707;0.8125;0.8165;1"/></text>
+    <text x="220" y="288" fill="#3fb950" font-size="40" font-weight="800">✓
+      <animate attributeName="opacity" dur="8s" repeatCount="indefinite" values="0;0;1;1" keyTimes="0;0.8125;0.8165;1"/></text>
+  </g>
+
+  <!-- sub text -->
+  <g text-anchor="middle" font-size="12">
+    <text x="220" y="320" fill="#8b93a7">Idle — pick a session and press Start.
+      <animate attributeName="opacity" dur="8s" repeatCount="indefinite" values="1;1;0;0" keyTimes="0;0.1875;0.1915;1"/></text>
+    <text x="220" y="320" fill="#8b93a7">Claude is working…
+      <animate attributeName="opacity" dur="8s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.1875;0.1915;0.375;0.379;1"/></text>
+    <text x="220" y="320" fill="#8b93a7">Limit hit — resuming automatically at 15:12
+      <animate attributeName="opacity" dur="8s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.375;0.379;0.8125;0.8165;1"/></text>
+    <text x="220" y="320" fill="#3fb950">Task complete.
+      <animate attributeName="opacity" dur="8s" repeatCount="indefinite" values="0;0;1;1" keyTimes="0;0.8125;0.8165;1"/></text>
+  </g>
+
+  <!-- ACTION card -->
+  <rect x="16" y="352" width="408" height="118" rx="12" fill="url(#card)" stroke="#232a3d"/>
+  <text x="30" y="374" fill="#8b93a7" font-size="10.5" letter-spacing="1.1" font-weight="700">WHAT SHOULD CLAUDE DO?</text>
+  <rect x="30" y="384" width="380" height="34" rx="9" fill="#141017" stroke="#c96442"/>
+  <circle cx="47" cy="401" r="6" fill="none" stroke="#c96442" stroke-width="1.6"/><circle cx="47" cy="401" r="2.6" fill="#c96442"/>
+  <text x="62" y="405" fill="#e6e9f0" font-size="12" font-weight="600">Continue where it left off</text>
+
+  <!-- Start button (press flash near 1.5s) -->
+  <rect x="30" y="428" width="185" height="30" rx="8" fill="#c96442"/>
+  <text x="122" y="448" fill="#fff" font-size="12.5" font-weight="700" text-anchor="middle">Start</text>
+  <rect x="30" y="428" width="185" height="30" rx="8" fill="#fff">
+    <animate attributeName="opacity" dur="8s" repeatCount="indefinite" values="0;0;0.5;0;0" keyTimes="0;0.17;0.1875;0.205;1"/></rect>
+  <rect x="223" y="428" width="185" height="30" rx="8" fill="none" stroke="#232a3d"/>
+  <text x="315" y="448" fill="#5a627a" font-size="12.5" font-weight="600" text-anchor="middle">Stop</text>
+
+  <!-- footer shield -->
+  <rect x="150" y="500" width="140" height="24" rx="12" fill="rgba(63,185,80,0.08)" stroke="rgba(63,185,80,0.35)"/>
+  <path d="M166 507l2.6 1.1v1.8c0 1.6-1.1 2.7-2.6 3.3-1.5-.6-2.6-1.7-2.6-3.3v-1.8L166 507z" fill="none" stroke="#3fb950" stroke-width="1.2"/>
+  <text x="220" y="516" fill="#3fb950" font-size="11" font-weight="600" text-anchor="middle">Zero tokens · runs locally</text>
+</svg>
