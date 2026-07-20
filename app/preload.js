@@ -19,6 +19,9 @@ contextBridge.exposeInMainWorld("api", {
   openExternal: (url) => ipcRenderer.invoke("openExternal", url),
   testNotify: (cfg) => ipcRenderer.invoke("testNotify", cfg),
   getUpdate: () => ipcRenderer.invoke("getUpdate"),
+  getAccount: () => ipcRenderer.invoke("getAccount"),
+  accountLogin: () => ipcRenderer.invoke("accountLogin"),
+  accountLogout: () => ipcRenderer.invoke("accountLogout"),
 
   onState: (cb) => ipcRenderer.on("state", (_e, s) => cb(s)),
   onLog: (cb) => ipcRenderer.on("log", (_e, l) => cb(l)),

@@ -16,6 +16,7 @@ const { AutoResumeEngine } = require("../lib/engine");
 const { listSessions, pickActiveSession, lastActiveProjectDir } = require("../lib/sessions");
 const { notifyRemote } = require("../lib/notify");
 const { checkUpdate } = require("../lib/update");
+const account = require("../lib/account");
 const { appIcon } = require("./icon");
 
 const pkg = require("../package.json");
@@ -276,6 +277,9 @@ ipcMain.handle("stop", () => stopEngine());
 ipcMain.handle("getQueue", () => queue);
 ipcMain.handle("openExternal", (_e, url) => shell.openExternal(url));
 ipcMain.handle("getUpdate", () => updateInfo);
+ipcMain.handle("getAccount", () => account.status());
+ipcMain.handle("accountLogin", () => account.login());
+ipcMain.handle("accountLogout", async () => { const r = await account.logout(); return { ok: r.code === 0 }; });
 ipcMain.handle("testNotify", async (_e, cfg) => {
   const res = await notifyRemote(cfg || settings.notify, "🔔 claude-resume-hub", "Test notification — it works!");
   if (!res.length) return { ok: false, error: "no channel configured" };
