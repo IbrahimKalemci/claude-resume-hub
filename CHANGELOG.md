@@ -18,8 +18,8 @@ This project adheres to [Semantic Versioning](https://semver.org/).
   when a newer version exists (no auto-install, no auth).
 - **Fix:** an auth failure ("Authentication failed / sign in again") that Claude
   Code can print while still exiting 0 was being reported as a successful "task
-  complete". It's now detected and surfaced as a clear error — "run `claude login`,
-  then start again" — with a notification; in a queue it stops all projects (the
+  complete". It's now detected and surfaced as a clear error — "run `claude auth
+  login`, then start again" — with a notification; in a queue it stops all projects (the
   same account auth is broken for every one).
 - Decision recorded: usage-% bars for other accounts are intentionally NOT added —
   there's no token-free source, and reading the OAuth token would break the audited
