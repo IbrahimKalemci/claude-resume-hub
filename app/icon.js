@@ -90,8 +90,8 @@ function segDist(px, py, ax, ay, bx, by) {
  * (ring + two hands) — matches the header logo's identity. Fully generated,
  * no binary asset.
  */
-function appIcon(size = 256) {
-  const [br, bg, bb] = hexToRgb("#c96442"); // terracotta disc
+function appIcon(size = 256, discHex = "#c96442") {
+  const [br, bg, bb] = hexToRgb(discHex);   // disc colour (phase-tinted in the tray)
   const [fr, fg, fb] = hexToRgb("#f6efe8"); // cream glyph
   const c = (size - 1) / 2;
   const discR = size * 0.47;

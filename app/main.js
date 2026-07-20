@@ -14,10 +14,12 @@ const fs = require("fs");
 
 const { AutoResumeEngine } = require("../lib/engine");
 const { listSessions, pickActiveSession, lastActiveProjectDir } = require("../lib/sessions");
-const { appIcon, clockIcon } = require("./icon");
+const { appIcon } = require("./icon");
 
 const COLORS = {
-  idle: "#8b93a7", starting: "#c96442", running: "#c96442",
+  // idle is the brand terracotta (matches the taskbar icon) so the tray never
+  // shows a faint grey blob; phase changes recolour it amber/green/red.
+  idle: "#c96442", starting: "#c96442", running: "#c96442",
   waiting: "#d29922", done: "#3fb950", error: "#f85149",
 };
 
@@ -54,8 +56,9 @@ function saveSettings() {
 // ---------------------------------------------------------------------------
 
 function trayImage(phase) {
-  // The clock mark in the phase colour: branded, and legible at 16px.
-  return nativeImage.createFromBuffer(clockIcon(COLORS[phase] || COLORS.idle, 16));
+  // SAME logo as the taskbar/window (disc + cream clock), just with the disc
+  // tinted by phase. 32px source so Windows downscales into the tray crisply.
+  return nativeImage.createFromBuffer(appIcon(32, COLORS[phase] || COLORS.idle));
 }
 
 function refreshTray() {
