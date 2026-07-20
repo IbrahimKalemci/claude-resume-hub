@@ -39,19 +39,40 @@ jobs:
           echo "**Full changelog:** https://github.com/IbrahimKalemci/claude-resume-hub/blob/main/CHANGELOG.md" >> /tmp/notes.md
           gh release edit "${GITHUB_REF_NAME}" --notes-file /tmp/notes.md
 
+  desktop:
+    name: build desktop app (windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Match version to the release tag
+        shell: bash
+        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
+      - name: Install + build the Electron app
+        run: |
+          npm install --no-audit --no-fund
+          npm run app:build
+      - name: Attach claude-resume-hub.exe to release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${GITHUB_REF_NAME}" "dist-app/claude-resume-hub.exe" --clobber
+
   binaries:
-    name: build exe (${{ matrix.os }})
+    name: build cli binary (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: windows-latest
-            asset: claude-resume-hub
+            asset: claude-resume-hub-cli
           - os: macos-latest
-            asset: claude-resume-hub-macos
+            asset: claude-resume-hub-cli-macos
           - os: ubuntu-latest
-            asset: claude-resume-hub-linux
+            asset: claude-resume-hub-cli-linux
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
