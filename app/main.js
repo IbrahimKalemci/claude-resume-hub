@@ -188,7 +188,10 @@ function runNext() {
   qIndex++;
   if (qIndex >= queue.length) {
     send("queue", queue);
-    pushState({ phase: "done", message: queue.length > 1 ? "All projects done." : "Task complete.", queueIndex: qIndex, queueTotal: queue.length });
+    // Keep the engine's nuanced message for a single project (e.g. "no usage
+    // limit was active"); only override when several projects ran.
+    const msg = queue.length > 1 ? "All projects done." : (state.message || "Done.");
+    pushState({ phase: "done", message: msg, queueIndex: qIndex, queueTotal: queue.length });
     return;
   }
   const job = queue[qIndex];
