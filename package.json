@@ -1,6 +1,6 @@
 {
   "name": "claude-resume-hub",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Run Claude Code and auto-continue the moment a usage/session limit resets — with a live dashboard and desktop alerts. Cross-platform, zero-dependency.",
   "bin": {
     "claude-resume-hub": "bin/cli.js",
@@ -63,6 +63,10 @@
       "app/**/*",
       "lib/**/*",
       "package.json"
+    ],
+    "compression": "maximum",
+    "electronLanguages": [
+      "en-US"
     ],
     "win": {
       "target": "portable",

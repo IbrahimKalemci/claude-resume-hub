@@ -264,6 +264,7 @@
       <div class="row" style="margin-top:9px;gap:14px;flex-wrap:wrap">
         <label class="toggle"><input type="checkbox" id="smart" /><span class="switch"></span> Smart resume</label>
         <label class="toggle"><input type="checkbox" id="newSession" /><span class="switch"></span> New session</label>
+        <label class="toggle"><input type="checkbox" id="unattended" /><span class="switch"></span> Unattended</label>
       </div>
       <div class="hint" id="taskHint">Sends “continue” to the session above when the limit opens.</div>
 
@@ -287,6 +288,14 @@
     <section class="card">
       <h2>Activity</h2>
       <div id="log"></div>
+    </section>
+
+    <!-- stats -->
+    <section class="card" style="text-align:center;padding:12px">
+      <div style="font-size:12.5px;color:var(--dim)">
+        <b id="statResumes" style="color:var(--txt);font-size:15px">0</b> auto-resumes ·
+        <b id="statSaved" style="color:var(--ok);font-size:15px">0m</b> of waiting saved for you
+      </div>
     </section>
   </main>
 
@@ -324,6 +333,7 @@
     getSettings: function () { return Promise.resolve({ dir: "C:\\Users\\you\\Desktop\\my-project", smart: true, buffer: 30, autoStart: false }); },
     saveSettings: function () { return Promise.resolve(); },
     openExternal: function () { return Promise.resolve(); },
+    getStats: function () { return Promise.resolve({ resumes: 7, waitMs: 3 * 3600000 + 40 * 60000, history: [] }); },
     getAccount: function () { return Promise.resolve({ loggedIn: true, email: "you@example.com", plan: "pro" }); },
     accountLogin: function () { return Promise.resolve({ ok: true }); },
     accountLogout: function () { return Promise.resolve({ ok: true }); },
@@ -541,6 +551,9 @@
     } else {
       hint.textContent = "Sends “continue” to the session above once the limit opens.";
     }
+    if ($("unattended").checked) {
+      hint.innerHTML += ' <b style="color:var(--warn)">⚠ Unattended: auto-approves ALL tools (file edits & shell commands) so it finishes without prompts.</b>';
+    }
     updateButtons();
   }
 
@@ -550,7 +563,8 @@
   function currentJob() {
     var m = mode(), isNew = $("newSession").checked, txt = $("task").value.trim();
     var j = {
-      dir: settings.dir, smart: $("smart").checked, buffer: Number($("sBuffer").value) || 30,
+      dir: settings.dir, smart: $("smart").checked, unattended: $("unattended").checked,
+      buffer: Number($("sBuffer").value) || 30,
       sessionId: null, task: null, prompt: "continue", label: baseName(settings.dir), status: "queued",
     };
     if (isNew) j.task = txt || "continue";
@@ -607,6 +621,20 @@
     });
   };
 
+  function humanDur(ms) {
+    var m = Math.round((ms || 0) / 60000);
+    if (m < 60) return m + "m";
+    var h = Math.floor(m / 60);
+    return h + "h " + (m % 60) + "m";
+  }
+  function renderStats(s) {
+    if (!s) return;
+    $("statResumes").textContent = s.resumes || 0;
+    $("statSaved").textContent = humanDur(s.waitMs);
+  }
+  if (api.getStats) api.getStats().then(renderStats);
+  if (api.onStats) api.onStats(renderStats);
+
   if (api.onQueue) api.onQueue(function (q) {
     // main-process queue carries live statuses in the same order
     q.forEach(function (mj, i) { if (queue[i]) queue[i].status = mj.status; });
@@ -617,6 +645,7 @@
     r.addEventListener("change", refreshAction);
   });
   $("newSession").addEventListener("change", refreshAction);
+  $("unattended").addEventListener("change", refreshAction);
   $("task").addEventListener("input", refreshAction);
   $("stop").onclick = function () { api.stop(); addLog({ line: "Stopped by user." }); };
   function collectNotify() {

@@ -24,6 +24,7 @@ function parseArgs(argv) {
     verbose: false,
     list: false,
     smart: false,
+    unattended: false,
     web: false,
     tray: false,
     port: 4177,
@@ -47,6 +48,7 @@ function parseArgs(argv) {
       case "-m": case "--max-cycles": opts.maxCycles = parseInt(next(), 10); break;
       case "-l": case "--list": opts.list = true; break;
       case "--smart": opts.smart = true; break;
+      case "--unattended": case "--yolo": opts.unattended = true; break;
       case "-w": case "--web": opts.web = true; break;
       case "--tray": opts.tray = true; opts.web = true; break;
       case "--port": opts.port = parseInt(next(), 10); break;
@@ -86,6 +88,9 @@ OPTIONS
       --smart             Context-aware resume: reads the session's last step and
                           nudges Claude to pick up exactly there (instead of a bare
                           "continue"). Reads the transcript locally; no AI/network.
+      --unattended        Auto-approve ALL tools (--dangerously-skip-permissions) so
+                          a resumed task finishes headless instead of hanging on a
+                          prompt. Bypasses every permission check — use with care.
   -w, --web               Open a live dashboard (countdown + desktop alerts)
       --tray              Run a system-tray icon (Windows; implies --web). On
                           macOS/Linux this falls back to the browser dashboard.

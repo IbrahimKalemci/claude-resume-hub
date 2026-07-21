@@ -17,6 +17,7 @@ const { listSessions, pickActiveSession, lastActiveProjectDir } = require("../li
 const { notifyRemote } = require("../lib/notify");
 const { checkUpdate } = require("../lib/update");
 const account = require("../lib/account");
+const stats = require("../lib/stats");
 const { appIcon } = require("./icon");
 
 const pkg = require("../package.json");
@@ -46,6 +47,9 @@ let settings = {
 
 function settingsFile() {
   return path.join(app.getPath("userData"), "settings.json");
+}
+function statsFile() {
+  return path.join(app.getPath("userData"), "stats.json");
 }
 
 function loadSettings() {
@@ -165,6 +169,7 @@ function buildJob(opts) {
     prompt: opts.prompt || "continue",
     task: opts.task || null,
     smart: !!opts.smart,
+    unattended: !!opts.unattended,
     buffer: Number(opts.buffer) || settings.buffer || 30,
     label: opts.label || jobLabel(dir),
     status: "queued",
@@ -200,16 +205,20 @@ function runNext() {
 
   engine = new AutoResumeEngine({
     prompt: job.prompt, task: job.task, session: job.sessionId, dir: job.dir,
-    buffer: job.buffer, poll: 5, maxCycles: 100, verbose: false, passthrough: [],
+    buffer: job.buffer, unattended: job.unattended, poll: 5, maxCycles: 100, verbose: false, passthrough: [],
   });
 
   const prefix = queue.length > 1 ? `[${qIndex + 1}/${queue.length}] ${job.label}: ` : "";
   let last = state.phase;
+  let waitStart = 0;
   engine.on("state", (s) => {
     pushState(Object.assign({}, s, { queueIndex: qIndex, queueTotal: queue.length, project: job.label }));
     if (s.phase !== last) {
-      if (s.phase === "waiting") notify("⏳ Usage limit hit", prefix + (s.message || "Waiting for the reset"));
-      if (s.phase === "running" && last === "waiting") notify("▶ Limit reset — resumed", job.label);
+      if (s.phase === "waiting") { waitStart = Date.now(); notify("⏳ Usage limit hit", prefix + (s.message || "Waiting for the reset")); }
+      if (s.phase === "running" && last === "waiting") {
+        if (waitStart) { try { send("stats", stats.record(statsFile(), job.label, Date.now() - waitStart)); } catch { /* ignore */ } }
+        notify("▶ Limit reset — resumed", job.label);
+      }
       last = s.phase;
     }
   });
@@ -280,6 +289,7 @@ ipcMain.handle("stop", () => stopEngine());
 ipcMain.handle("getQueue", () => queue);
 ipcMain.handle("openExternal", (_e, url) => shell.openExternal(url));
 ipcMain.handle("getUpdate", () => updateInfo);
+ipcMain.handle("getStats", () => stats.load(statsFile()));
 ipcMain.handle("getAccount", () => account.status());
 ipcMain.handle("accountLogin", () => account.login());
 ipcMain.handle("accountLogout", async () => { const r = await account.logout(); return { ok: r.code === 0 }; });

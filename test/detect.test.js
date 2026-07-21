@@ -6,6 +6,9 @@ const { detectLimit, detectAuthError, parseClockTime, fmtDuration } = require(".
 const { buildClaudeArgs } = require("../lib/engine.js");
 const { encodeDir, listSessions, lastAssistantText, pickActiveSession } = require("../lib/sessions.js");
 const { PS_SCRIPT, startTray } = require("../lib/tray.js");
+const statsLib = require("../lib/stats.js");
+const os = require("node:os");
+const fs = require("node:fs");
 
 test("epoch marker in seconds -> exact reset time", () => {
   const r = detectLimit("Claude AI usage limit reached|1759770000");
@@ -113,6 +116,15 @@ test("buildClaudeArgs: --session resumes a specific id", () => {
   );
 });
 
+test("buildClaudeArgs: --unattended appends --dangerously-skip-permissions", () => {
+  assert.deepEqual(
+    buildClaudeArgs({ session: "abc", prompt: "continue", unattended: true, passthrough: [] }, 2),
+    ["--resume", "abc", "-p", "continue", "--dangerously-skip-permissions"]
+  );
+  // off by default
+  assert.deepEqual(buildClaudeArgs({ prompt: "continue", passthrough: [] }, 2), ["-c", "-p", "continue"]);
+});
+
 test("buildClaudeArgs: passthrough args are forwarded", () => {
   assert.deepEqual(
     buildClaudeArgs({ prompt: "continue", passthrough: ["--model", "opus"] }, 2),
@@ -152,6 +164,17 @@ test("pickActiveSession is consistent with listSessions()[0]", () => {
 
 test("pickActiveSession returns null for an unknown project", () => {
   assert.equal(pickActiveSession(path.join("/", "no", "such", "project", "zzz")), null);
+});
+
+test("stats: record accumulates resumes and total wait time", () => {
+  const f = path.join(os.tmpdir(), "crh-stats-" + process.pid + ".json");
+  try { fs.rmSync(f, { force: true }); } catch {}
+  statsLib.record(f, "proj-a", 60000, 1);
+  const s = statsLib.record(f, "proj-b", 30000, 2);
+  assert.equal(s.resumes, 2);
+  assert.equal(s.waitMs, 90000);
+  assert.equal(statsLib.load(f).history.length, 2);
+  try { fs.rmSync(f, { force: true }); } catch {}
 });
 
 test("tray PS_SCRIPT is a NotifyIcon shim; startTray is a no-op off Windows", () => {

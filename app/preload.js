@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld("api", {
   openExternal: (url) => ipcRenderer.invoke("openExternal", url),
   testNotify: (cfg) => ipcRenderer.invoke("testNotify", cfg),
   getUpdate: () => ipcRenderer.invoke("getUpdate"),
+  getStats: () => ipcRenderer.invoke("getStats"),
   getAccount: () => ipcRenderer.invoke("getAccount"),
   accountLogin: () => ipcRenderer.invoke("accountLogin"),
   accountLogout: () => ipcRenderer.invoke("accountLogout"),
@@ -28,4 +29,5 @@ contextBridge.exposeInMainWorld("api", {
   onOutput: (cb) => ipcRenderer.on("output", (_e, chunk) => cb(chunk)),
   onUpdate: (cb) => ipcRenderer.on("update", (_e, info) => cb(info)),
   onQueue: (cb) => ipcRenderer.on("queue", (_e, q) => cb(q)),
+  onStats: (cb) => ipcRenderer.on("stats", (_e, s) => cb(s)),
 });

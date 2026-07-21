@@ -3,6 +3,19 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.6.0] — 2026-07-21
+
+### Added
+- **Unattended mode** (`--unattended` / a toggle in the app): auto-approves all
+  tools (`--dangerously-skip-permissions`) so a resumed task actually *finishes*
+  headless instead of hanging on a permission prompt. Opt-in, clearly warned.
+- **Stats**: the app tracks how many times it auto-resumed and how much waiting it
+  saved you (sum of wait durations), shown as a live tile. `lib/stats.js`.
+
+### Changed
+- Desktop `.exe` is smaller (~70MB → ~64MB) via `compression: maximum` and shipping
+  only the en-US locale.
+
 ## [1.5.0] — 2026-07-20
 
 ### Added (desktop app)
