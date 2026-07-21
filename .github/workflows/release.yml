@@ -1,7 +1,7 @@
 name: Publish
 
 # Fires when you publish a GitHub Release (Releases → Draft a new release →
-# create a tag like v1.4.0 → Publish). Publishes to npm via OIDC "trusted
+# create a tag like v1.6.0 → Publish). Publishes to npm via OIDC "trusted
 # publishing" (no stored token — one-time setup on npmjs.com, see docs/RELEASING.md)
 # AND builds a standalone .exe per OS, attaching them to the Release.
 

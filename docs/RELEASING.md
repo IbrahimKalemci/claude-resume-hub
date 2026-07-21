@@ -27,11 +27,11 @@ This repo auto-publishes to npm from GitHub Actions using npm's **trusted publis
 ## Publishing a new version (zero terminal)
 
 1. On GitHub: **Releases → Draft a new release**.
-2. **Choose a tag** → type a new one, e.g. `v1.1.1` → *Create new tag on publish*.
+2. **Choose a tag** → type a new one, e.g. `v1.6.1` → *Create new tag on publish*.
 3. Give it a title/notes → **Publish release**.
 
 The `Publish to npm` workflow then:
-- sets `package.json` version from the tag (`v1.1.1` → `1.1.1`),
+- sets `package.json` version from the tag (`v1.6.1` → `1.6.1`),
 - runs the tests,
 - publishes to npm with provenance.
 
