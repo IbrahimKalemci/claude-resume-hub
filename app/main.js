@@ -12,7 +12,7 @@ const { app, BrowserWindow, Tray, Menu, ipcMain, dialog, shell, Notification, na
 const path = require("path");
 const fs = require("fs");
 
-const { AutoResumeEngine } = require("../lib/engine");
+const { AutoResumeEngine, probeLimit } = require("../lib/engine");
 const { listSessions, pickActiveSession, lastActiveProjectDir } = require("../lib/sessions");
 const { notifyRemote } = require("../lib/notify");
 const { checkUpdate } = require("../lib/update");
@@ -278,11 +278,31 @@ ipcMain.handle("chooseFolder", async () => {
   saveSettings();
   return settings.dir;
 });
-ipcMain.handle("start", (_e, opts) => {
+ipcMain.handle("start", async (_e, opts) => {
   opts = opts || {};
   const jobs = (opts.jobs && opts.jobs.length)
     ? opts.jobs.map((j) => buildJob(j))
     : [buildJob(opts)];
+
+  // For a plain resume (no task), quickly check whether a limit is actually
+  // active. If not, tell the user instead of quietly running "continue".
+  const first = jobs[0];
+  if (first && !first.task && first.dir && fs.existsSync(first.dir)) {
+    pushState({ phase: "starting", message: "Checking your usage limit…" });
+    const p = await probeLimit(first.dir, { timeoutSec: 45 });
+    if (!p.error) {
+      if (p.auth) {
+        pushState({ phase: "error", message: p.authMsg });
+        notify("🔑 Sign-in needed", p.authMsg);
+        return { ok: false, reason: "auth" };
+      }
+      if (!p.limited) {
+        pushState({ phase: "idle", resetAt: null, wakeAt: null, message: "No usage limit is active right now — nothing to wait for. Give it a task to run now, or start when you're limited." });
+        notify("ℹ No active limit", "You're not limited right now — nothing to resume.");
+        return { ok: true, noLimit: true };
+      }
+    }
+  }
   return startJobs(jobs);
 });
 ipcMain.handle("stop", () => stopEngine());

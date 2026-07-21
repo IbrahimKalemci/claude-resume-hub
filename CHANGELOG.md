@@ -11,6 +11,9 @@ This project adheres to [Semantic Versioning](https://semver.org/).
   headless instead of hanging on a permission prompt. Opt-in, clearly warned.
 - **Stats**: the app tracks how many times it auto-resumed and how much waiting it
   saved you (sum of wait durations), shown as a live tile. `lib/stats.js`.
+- **Limit pre-check on Start**: a plain resume now first checks whether a usage
+  limit is actually active. If not, it tells you ("no active limit — nothing to
+  wait for") instead of quietly running "continue". `probeLimit()`.
 
 ### Changed
 - Desktop `.exe` is smaller (~70MB → ~64MB) via `compression: maximum` and shipping

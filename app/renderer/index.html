@@ -415,7 +415,7 @@
     } else {
       label.textContent = "Status";
       big.textContent = "—";
-      sub.textContent = "Idle — pick a session and press Start.";
+      sub.textContent = state.message || "Idle — pick a session and press Start.";
       meta.textContent = "";
     }
 
