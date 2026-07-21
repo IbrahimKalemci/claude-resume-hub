@@ -14,6 +14,8 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - **Limit pre-check on Start**: a plain resume now first checks whether a usage
   limit is actually active. If not, it tells you ("no active limit — nothing to
   wait for") instead of quietly running "continue". `probeLimit()`.
+- **Bilingual UI (English / Türkçe)** with a language switcher in Settings; the
+  choice is persisted. Static labels + the main dynamic strings are translated.
 
 ### Changed
 - Desktop `.exe` is smaller (~70MB → ~64MB) via `compression: maximum` and shipping

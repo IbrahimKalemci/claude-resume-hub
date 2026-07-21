@@ -53,6 +53,7 @@
        padding:5px 10px;font-size:11.5px;cursor:pointer;font-weight:600}
   .btn:hover{color:var(--txt);border-color:var(--dim)}
   .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.sel{background:var(--accent);border-color:var(--accent);color:#fff}
   .btn.primary:hover{filter:brightness(1.08)}
   .btn.primary:disabled,.btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
   .btn.danger{border-color:var(--err);color:var(--err)}
@@ -172,36 +173,43 @@
             <path d="M15 18l-6-6 6-6"/>
           </svg>
         </button>
-        <span class="setTitle">Settings</span>
+        <span class="setTitle" data-i18n="settings">Settings</span>
       </div>
       <div class="setBody">
-      <h2 style="margin-top:0">Account</h2>
+      <h2 style="margin-top:0" data-i18n="language">Language</h2>
+      <div class="row" style="gap:8px;margin-bottom:12px">
+        <button class="btn" id="langEn">English</button>
+        <button class="btn" id="langTr">Türkçe</button>
+      </div>
+      <div style="border-top:1px solid var(--line);margin:12px 0"></div>
+
+      <h2 style="margin-top:0" data-i18n="account">Account</h2>
       <div class="row" style="margin-bottom:8px"><span id="acctInfo" style="font-size:12.5px;color:var(--dim)">checking…</span></div>
       <div class="row" style="gap:8px;margin-bottom:6px">
-        <button class="btn" id="acctLogin">Sign in / switch account</button>
-        <button class="btn" id="acctLogout">Sign out</button>
+        <button class="btn" id="acctLogin" data-i18n="signin">Sign in / switch account</button>
+        <button class="btn" id="acctLogout" data-i18n="signout">Sign out</button>
       </div>
-      <div class="hint">Uses Claude Code's own <code>claude auth</code> login — this app never sees or stores your token.</div>
+      <div class="hint" data-i18n="acctHint">Uses Claude Code's own claude auth login — this app never sees or stores your token.</div>
       <div style="border-top:1px solid var(--line);margin:12px 0"></div>
 
       <div class="field">
-        <label for="sBuffer">Resume buffer (seconds after reset)</label>
+        <label for="sBuffer" data-i18n="buffer">Resume buffer (seconds after reset)</label>
         <input type="number" id="sBuffer" min="0" max="600" value="30" />
       </div>
       <div class="field">
-        <label for="sSmart">Smart resume by default</label>
+        <label for="sSmart" data-i18n="smartDefault">Smart resume by default</label>
         <label class="toggle"><input type="checkbox" id="sSmart" /><span class="switch"></span></label>
       </div>
       <div class="field">
-        <label for="sAuto">Start minimised to tray</label>
+        <label for="sAuto" data-i18n="autostart">Start minimised to tray</label>
         <label class="toggle"><input type="checkbox" id="sAuto" /><span class="switch"></span></label>
       </div>
 
       <div style="border-top:1px solid var(--line);margin:4px 0 10px"></div>
-      <h2 style="margin-top:0">Phone / chat alerts <span class="faint" style="text-transform:none;letter-spacing:0;font-weight:400">— optional, outgoing only</span></h2>
+      <h2 style="margin-top:0"><span data-i18n="alerts">Phone / chat alerts</span> <span class="faint" data-i18n="alertsOpt" style="text-transform:none;letter-spacing:0;font-weight:400">— optional, outgoing only</span></h2>
 
       <label class="field" style="flex-direction:column;align-items:stretch;gap:5px">
-        <span style="font-size:11px;color:var(--dim)">Webhook URL <span class="faint">(Discord / Slack / ntfy / any)</span></span>
+        <span data-i18n="webhookLbl" style="font-size:11px;color:var(--dim)">Webhook URL (Discord / Slack / ntfy / any)</span>
         <input type="text" id="nWebhook" placeholder="https://…" style="width:100%;background:#0a0d15;border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:6px 8px;font-size:11px;-webkit-user-select:text;user-select:text" />
       </label>
       <div class="field" style="gap:6px">
@@ -210,17 +218,17 @@
       </div>
       <div class="row" style="justify-content:space-between;margin-bottom:0">
         <span class="faint" id="nTestResult" style="font-size:10.5px"></span>
-        <button class="btn" id="nTest">Send test</button>
+        <button class="btn" id="nTest" data-i18n="sendTest">Send test</button>
       </div>
       </div><!-- /setBody -->
     </section>
 
     <!-- project + session -->
     <section class="card">
-      <h2>Project</h2>
+      <h2 data-i18n="project">Project</h2>
       <div class="row">
         <span class="path ellipsis mono" id="dir">—</span>
-        <button class="btn" id="chooseDir">Change</button>
+        <button class="btn" id="chooseDir" data-i18n="change">Change</button>
       </div>
 
       <div class="session" id="activeBox">
@@ -237,64 +245,64 @@
 
     <!-- status -->
     <section class="card status">
-      <div class="label" id="statLabel">Status</div>
+      <div class="label" id="statLabel" data-i18n="status">Status</div>
       <div class="big mono" id="statBig">—</div>
-      <div class="sub" id="statSub">Idle — pick a session and press Start.</div>
+      <div class="sub" id="statSub" data-i18n="idle">Idle — pick a session and press Start.</div>
       <div class="meta" id="statMeta"></div>
     </section>
 
     <!-- action -->
     <section class="card">
-      <h2>What should Claude do with this session?</h2>
+      <h2 data-i18n="actionQ">What should Claude do with this session?</h2>
 
       <label class="choice">
         <input type="radio" name="mode" value="continue" checked /><span class="radio"></span>
-        <span><b>Continue</b> where it left off
-          <span class="sub2">Sends “continue” the moment the limit resets.</span></span>
+        <span><b data-i18n="contTitle">Continue</b><span data-i18n="contWhere"> where it left off</span>
+          <span class="sub2" data-i18n="contSub">Sends “continue” the moment the limit resets.</span></span>
       </label>
 
       <label class="choice">
         <input type="radio" name="mode" value="task" /><span class="radio"></span>
-        <span><b>Give it a task</b>
-          <span class="sub2">Send your own instruction to this same session instead.</span></span>
+        <span><b data-i18n="taskTitle">Give it a task</b>
+          <span class="sub2" data-i18n="taskSub">Send your own instruction to this same session instead.</span></span>
       </label>
 
-      <textarea id="task" style="display:none" placeholder="e.g. finish the refactor and run the tests"></textarea>
+      <textarea id="task" style="display:none" data-i18n-ph="taskPh" placeholder="e.g. finish the refactor and run the tests"></textarea>
 
       <div class="row" style="margin-top:9px;gap:14px;flex-wrap:wrap">
-        <label class="toggle"><input type="checkbox" id="smart" /><span class="switch"></span> Smart resume</label>
-        <label class="toggle"><input type="checkbox" id="newSession" /><span class="switch"></span> New session</label>
-        <label class="toggle"><input type="checkbox" id="unattended" /><span class="switch"></span> Unattended</label>
+        <label class="toggle"><input type="checkbox" id="smart" /><span class="switch"></span> <span data-i18n="smart">Smart resume</span></label>
+        <label class="toggle"><input type="checkbox" id="newSession" /><span class="switch"></span> <span data-i18n="newSession">New session</span></label>
+        <label class="toggle"><input type="checkbox" id="unattended" /><span class="switch"></span> <span data-i18n="unattended">Unattended</span></label>
       </div>
-      <div class="hint" id="taskHint">Sends “continue” to the session above when the limit opens.</div>
+      <div class="hint" id="taskHint" data-i18n="hintContinue">Sends “continue” to the session above when the limit opens.</div>
 
       <div class="actions">
-        <button class="btn primary" id="start">Start</button>
-        <button class="btn danger" id="stop" disabled>Stop</button>
+        <button class="btn primary" id="start" data-i18n="start">Start</button>
+        <button class="btn danger" id="stop" data-i18n="stop" disabled>Stop</button>
       </div>
     </section>
 
     <!-- queue -->
     <section class="card">
       <div class="row" style="justify-content:space-between;margin-bottom:2px">
-        <h2 style="margin:0">Queue <span class="faint" style="text-transform:none;letter-spacing:0;font-weight:400">— run projects one after another</span></h2>
-        <button class="linklike" id="addQueue" style="padding:0">+ Add this project</button>
+        <h2 style="margin:0"><span data-i18n="queue">Queue</span> <span class="faint" data-i18n="queueSub" style="text-transform:none;letter-spacing:0;font-weight:400">— run projects one after another</span></h2>
+        <button class="linklike" id="addQueue" data-i18n="addProject" style="padding:0">+ Add this project</button>
       </div>
-      <div class="hint" id="queueHint" style="margin-top:2px">One account = one reset clock, so queued projects resume in order, not at once.</div>
+      <div class="hint" id="queueHint" data-i18n="queueHint" style="margin-top:2px">One account = one reset clock, so queued projects resume in order, not at once.</div>
       <div class="slist" id="queueList" style="margin-top:8px"></div>
     </section>
 
     <!-- log -->
     <section class="card">
-      <h2>Activity</h2>
+      <h2 data-i18n="activity">Activity</h2>
       <div id="log"></div>
     </section>
 
     <!-- stats -->
     <section class="card" style="text-align:center;padding:12px">
       <div style="font-size:12.5px;color:var(--dim)">
-        <b id="statResumes" style="color:var(--txt);font-size:15px">0</b> auto-resumes ·
-        <b id="statSaved" style="color:var(--ok);font-size:15px">0m</b> of waiting saved for you
+        <b id="statResumes" style="color:var(--txt);font-size:15px">0</b> <span data-i18n="statResumes">auto-resumes</span> ·
+        <b id="statSaved" style="color:var(--ok);font-size:15px">0m</b> <span data-i18n="statSaved">of waiting saved for you</span>
       </div>
     </section>
   </main>
@@ -305,7 +313,7 @@
         <path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/>
         <path d="M9 12l2 2 4-4"/>
       </svg>
-      Zero tokens · runs locally
+      <span data-i18n="shield">Zero tokens · runs locally</span>
     </span>
   </footer>
 </div>
@@ -314,6 +322,85 @@
 (function () {
   "use strict";
   var $ = function (id) { return document.getElementById(id); };
+
+  // ---- i18n ----
+  var STR = {
+    en: {
+      settings: "Settings", back: "Back", account: "Account",
+      signin: "Sign in / switch account", signout: "Sign out",
+      acctHint: "Uses Claude Code's own claude auth login — this app never sees or stores your token.",
+      language: "Language", buffer: "Resume buffer (seconds after reset)",
+      smartDefault: "Smart resume by default", autostart: "Start minimised to tray",
+      alerts: "Phone / chat alerts", alertsOpt: "— optional, outgoing only",
+      webhookLbl: "Webhook URL (Discord / Slack / ntfy / any)", sendTest: "Send test",
+      project: "PROJECT", change: "Change", noSession: "no session found",
+      runFirst: "Run Claude Code in this folder first.", allSessions: "All sessions",
+      status: "STATUS", resumingIn: "RESUMING IN", idle: "Idle — pick a session and press Start.",
+      working: "Claude is working…",
+      actionQ: "WHAT SHOULD CLAUDE DO WITH THIS SESSION?",
+      contTitle: "Continue", contWhere: " where it left off",
+      contSub: "Sends “continue” the moment the limit resets.",
+      taskTitle: "Give it a task", taskSub: "Send your own instruction to this same session instead.",
+      smart: "Smart resume", newSession: "New session", unattended: "Unattended",
+      hintContinue: "Sends “continue” to the session above once the limit opens.",
+      hintTaskSet: "Sends your instruction to the session above once the limit opens.",
+      hintTaskEmpty: "Type the instruction to send to that session.",
+      hintNew: "⚠ New session — starts a fresh conversation, it will NOT continue the one above.",
+      hintUnattended: " ⚠ Unattended: auto-approves ALL tools (file edits & shell commands) so it finishes without prompts.",
+      taskPh: "e.g. finish the refactor and run the tests",
+      start: "Start", stop: "Stop", startQueue: "Start queue",
+      queue: "Queue", queueSub: "— run projects one after another",
+      queueHint: "One account = one reset clock, so queued projects resume in order, not at once.",
+      addProject: "+ Add this project",
+      activity: "Activity", download: "Download",
+      statResumes: "auto-resumes", statSaved: "of waiting saved for you",
+      shield: "Zero tokens · runs locally",
+    },
+    tr: {
+      settings: "Ayarlar", back: "Geri", account: "Hesap",
+      signin: "Giriş yap / hesap değiştir", signout: "Çıkış yap",
+      acctHint: "Claude Code'un kendi claude auth login'ini kullanır — bu uygulama token'ını asla görmez/saklamaz.",
+      language: "Dil", buffer: "Devam tamponu (reset sonrası saniye)",
+      smartDefault: "Varsayılan akıllı devam", autostart: "Tepsiye küçültülmüş başlat",
+      alerts: "Telefon / sohbet bildirimi", alertsOpt: "— opsiyonel, sadece giden",
+      webhookLbl: "Webhook URL (Discord / Slack / ntfy / herhangi)", sendTest: "Test gönder",
+      project: "PROJE", change: "Değiştir", noSession: "oturum bulunamadı",
+      runFirst: "Önce bu klasörde Claude Code çalıştır.", allSessions: "Tüm oturumlar",
+      status: "DURUM", resumingIn: "DEVAMA KALAN", idle: "Boşta — bir oturum seç ve Başlat'a bas.",
+      working: "Claude çalışıyor…",
+      actionQ: "BU OTURUMDA CLAUDE NE YAPSIN?",
+      contTitle: "Devam et", contWhere: " kaldığı yerden",
+      contSub: "Limit açılır açılmaz “continue” gönderir.",
+      taskTitle: "Bir görev ver", taskSub: "Aynı oturuma kendi talimatını gönder.",
+      smart: "Akıllı devam", newSession: "Yeni oturum", unattended: "Gözetimsiz",
+      hintContinue: "Limit açılınca yukarıdaki oturuma “continue” gönderir.",
+      hintTaskSet: "Limit açılınca talimatını yukarıdaki oturuma gönderir.",
+      hintTaskEmpty: "O oturuma gönderilecek talimatı yaz.",
+      hintNew: "⚠ Yeni oturum — sıfırdan bir konuşma başlatır, yukarıdakini DEVAM ETTİRMEZ.",
+      hintUnattended: " ⚠ Gözetimsiz: TÜM araçları (dosya düzenleme & komut) otomatik onaylar, istemsiz bitirir.",
+      taskPh: "örn. refactor'ı bitir ve testleri çalıştır",
+      start: "Başlat", stop: "Durdur", startQueue: "Kuyruğu başlat",
+      queue: "Kuyruk", queueSub: "— projeleri sırayla çalıştır",
+      queueHint: "Tek hesap = tek reset saati; kuyruktaki projeler aynı anda değil, sırayla devam eder.",
+      addProject: "+ Bu projeyi ekle",
+      activity: "Etkinlik", download: "İndir",
+      statResumes: "otomatik devam", statSaved: "bekleme kazandırıldı",
+      shield: "Token yok · yerelde çalışır",
+    },
+  };
+  var lang = "en";
+  function t(k) { return (STR[lang] && STR[lang][k]) || STR.en[k] || k; }
+  function applyI18n() {
+    document.querySelectorAll("[data-i18n]").forEach(function (el) {
+      var v = t(el.getAttribute("data-i18n"));
+      if (v) el.textContent = v;
+    });
+    document.querySelectorAll("[data-i18n-ph]").forEach(function (el) {
+      var v = t(el.getAttribute("data-i18n-ph"));
+      if (v) el.setAttribute("placeholder", v);
+    });
+    if ($("langEn")) { $("langEn").classList.toggle("sel", lang === "en"); $("langTr").classList.toggle("sel", lang === "tr"); }
+  }
 
   // ---- demo fallback so the page can be reviewed in a plain browser ----
   var DEMO = !window.api;
@@ -376,9 +463,9 @@
   function renderActive() {
     var s = sessions.filter(function (x) { return x.id === selectedId; })[0] || sessions[0] || null;
     if (s) selectedId = s.id;
-    $("actId").textContent = s ? s.id : "no session found";
+    $("actId").textContent = s ? s.id : t("noSession");
     $("actId").style.color = s ? "" : "var(--faint)";
-    $("actMeta").textContent = s ? (fmtWhen(s.mtime) + " · " + s.turns + " prompts · " + s.sizeKB + " KB") : "Run Claude Code in this folder first.";
+    $("actMeta").textContent = s ? (fmtWhen(s.mtime) + " · " + s.turns + " prompts · " + s.sizeKB + " KB") : t("runFirst");
     $("actPrev").textContent = s && s.preview ? '"' + s.preview + '"' : "";
   }
 
@@ -392,30 +479,30 @@
     big.style.color = "";
 
     if (p === "waiting" && wakeMs) {
-      label.textContent = "Resuming in";
+      label.textContent = t("resumingIn");
       big.textContent = fmtCountdown(wakeMs - Date.now());
       big.style.color = "var(--warn)";
       sub.textContent = state.message || "Limit hit";
       meta.textContent = "Resets at " + fmtTime(state.resetAt) + " · cycle " + state.cycle + " / " + state.maxCycles;
     } else if (p === "running" || p === "starting") {
-      label.textContent = "Status";
+      label.textContent = t("status");
       big.textContent = "▶";
       big.classList.add("pulse");
       big.style.color = "var(--accent)";
-      sub.textContent = state.message || "Claude is working…";
+      sub.textContent = state.message || t("working");
       meta.textContent = state.cycle ? "cycle " + state.cycle + " / " + state.maxCycles : "";
     } else if (p === "done") {
-      label.textContent = "Status";
+      label.textContent = t("status");
       big.textContent = "✓"; big.style.color = "var(--ok)";
       sub.textContent = state.message || "Task complete."; meta.textContent = "";
     } else if (p === "error") {
-      label.textContent = "Status";
+      label.textContent = t("status");
       big.textContent = "✕"; big.style.color = "var(--err)";
       sub.textContent = state.message || "Stopped."; meta.textContent = "";
     } else {
-      label.textContent = "Status";
+      label.textContent = t("status");
       big.textContent = "—";
-      sub.textContent = state.message || "Idle — pick a session and press Start.";
+      sub.textContent = state.message || t("idle");
       meta.textContent = "";
     }
 
@@ -480,6 +567,8 @@
   function loadAll() {
     return api.getSettings().then(function (s) {
       settings = s || settings;
+      lang = (settings.lang === "tr") ? "tr" : "en";
+      applyI18n();
       $("dir").textContent = settings.dir || "—";
       $("sBuffer").value = settings.buffer;
       $("sSmart").checked = !!settings.smart;
@@ -499,6 +588,22 @@
   // ---------- events ----------
   $("gear").onclick = function () { $("settings").classList.toggle("open"); refreshAccount(); };
   $("setBack").onclick = function () { $("settings").classList.remove("open"); };
+
+  function setLang(l) {
+    lang = (l === "tr") ? "tr" : "en";
+    settings.lang = lang;
+    if (api.saveSettings) api.saveSettings(settings);
+    applyI18n();
+    // refresh JS-driven text
+    refreshAction();
+    renderQueue();
+    renderStatus();
+    renderActive();
+    var open = $("slist").style.display !== "none";
+    $("toggleList").textContent = (open ? "▾ " : "▸ ") + t("allSessions");
+  }
+  $("langEn").onclick = function () { setLang("en"); };
+  $("langTr").onclick = function () { setLang("tr"); };
 
   function renderAccount(a) {
     var el = $("acctInfo");
@@ -521,7 +626,7 @@
   $("toggleList").onclick = function () {
     var l = $("slist"), open = l.style.display !== "none";
     l.style.display = open ? "none" : "flex";
-    $("toggleList").textContent = (open ? "▸" : "▾") + " All sessions";
+    $("toggleList").textContent = (open ? "▸ " : "▾ ") + t("allSessions");
   };
   $("chooseDir").onclick = function () {
     api.chooseFolder().then(function (dir) {
@@ -542,17 +647,15 @@
     var hint = $("taskHint");
     hint.style.color = "";
     if (isNew) {
-      hint.innerHTML = "⚠ <b>New session</b> — starts a fresh conversation, it will NOT continue the one above.";
+      hint.textContent = t("hintNew");
       hint.style.color = "var(--warn)";
     } else if (m === "task") {
-      hint.textContent = txt
-        ? "Sends your instruction to the session above once the limit opens."
-        : "Type the instruction to send to that session.";
+      hint.textContent = txt ? t("hintTaskSet") : t("hintTaskEmpty");
     } else {
-      hint.textContent = "Sends “continue” to the session above once the limit opens.";
+      hint.textContent = t("hintContinue");
     }
     if ($("unattended").checked) {
-      hint.innerHTML += ' <b style="color:var(--warn)">⚠ Unattended: auto-approves ALL tools (file edits & shell commands) so it finishes without prompts.</b>';
+      hint.innerHTML += '<b style="color:var(--warn)">' + t("hintUnattended") + '</b>';
     }
     updateButtons();
   }
@@ -596,7 +699,7 @@
       list.appendChild(row);
     });
     $("queueList").style.display = queue.length ? "flex" : "none";
-    $("start").textContent = queue.length ? "Start queue (" + queue.length + ")" : "Start";
+    $("start").textContent = queue.length ? (t("startQueue") + " (" + queue.length + ")") : t("start");
   }
 
   $("addQueue").onclick = function () {
@@ -693,6 +796,7 @@
   if (api.getUpdate) api.getUpdate().then(showUpdate);
   setInterval(function () { if (state.phase === "waiting" && wakeMs) renderStatus(); }, 1000);
 
+  applyI18n();
   refreshAction();
   renderQueue();
   refreshAccount();
