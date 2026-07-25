@@ -170,13 +170,10 @@ async function main() {
 
   // --smart: build a context-aware resume prompt from the session's last step.
   if (opts.smart && !opts.task) {
-    const { sessionRecap } = require("../lib/sessions");
-    const recap = sessionRecap(opts.dir);
-    if (recap) {
-      opts.prompt =
-        `Continue where you left off and finish the task you were working on. ` +
-        `If it is already complete, say so instead of inventing new work. ` +
-        `For context, your last message was: "${recap.slice(0, 300)}${recap.length > 300 ? "…" : ""}"`;
+    const { sessionRecap, smartPrompt } = require("../lib/sessions");
+    const prompt = smartPrompt(sessionRecap(opts.dir));
+    if (prompt) {
+      opts.prompt = prompt;
       console.log(`${C.dim}[auto-resume] smart mode: resuming with context from your last step.${C.reset}`);
     } else {
       console.log(`${C.dim}[auto-resume] smart mode: no prior session found — using plain "continue".${C.reset}`);

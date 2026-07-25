@@ -21,6 +21,16 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - Desktop `.exe` is smaller (~70MB → ~64MB) via `compression: maximum` and shipping
   only the en-US locale.
 
+### Fixed
+- **"Give it a task" now actually runs.** A custom task was being treated like a
+  plain "continue" resume and swallowed by the "no active limit" pre-check, so it
+  reported "nothing to wait for" and never sent the instruction to Claude. A task
+  is an instruction to run *now* and is no longer gated on an active limit.
+- **"Smart resume" now works in the desktop app.** The toggle (on by default) was a
+  no-op in the GUI — smart context-building lived only in the CLI, so the app always
+  sent a bare "continue". The recap-building is now shared, so the app resumes from
+  your last step exactly like `--smart` on the CLI.
+
 ## [1.5.0] — 2026-07-20
 
 ### Added (desktop app)

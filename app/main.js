@@ -13,7 +13,7 @@ const path = require("path");
 const fs = require("fs");
 
 const { AutoResumeEngine, probeLimit } = require("../lib/engine");
-const { listSessions, pickActiveSession, lastActiveProjectDir } = require("../lib/sessions");
+const { listSessions, pickActiveSession, lastActiveProjectDir, sessionRecap, smartPrompt } = require("../lib/sessions");
 const { notifyRemote } = require("../lib/notify");
 const { checkUpdate } = require("../lib/update");
 const account = require("../lib/account");
@@ -203,8 +203,17 @@ function runNext() {
   job.status = "running";
   send("queue", queue);
 
+  // Smart resume: for a plain "continue" (no task), read the session's last step
+  // locally and nudge Claude to pick up exactly there instead of a bare
+  // "continue". Mirrors the CLI's --smart. No AI/network — just the transcript.
+  let prompt = job.prompt;
+  if (job.smart && !job.task && prompt === "continue") {
+    const sp = smartPrompt(sessionRecap(job.dir));
+    if (sp) prompt = sp;
+  }
+
   engine = new AutoResumeEngine({
-    prompt: job.prompt, task: job.task, session: job.sessionId, dir: job.dir,
+    prompt, task: job.task, session: job.sessionId, dir: job.dir,
     buffer: job.buffer, unattended: job.unattended, poll: 5, maxCycles: 100, verbose: false, passthrough: [],
   });
 
@@ -284,10 +293,13 @@ ipcMain.handle("start", async (_e, opts) => {
     ? opts.jobs.map((j) => buildJob(j))
     : [buildJob(opts)];
 
-  // For a plain resume (no task), quickly check whether a limit is actually
-  // active. If not, tell the user instead of quietly running "continue".
+  // For a PLAIN resume ("continue", no custom instruction), quickly check
+  // whether a limit is actually active. If not, tell the user instead of
+  // quietly running "continue". A custom task/prompt is an instruction to run
+  // NOW — it must never be swallowed by the "no active limit" pre-check.
   const first = jobs[0];
-  if (first && !first.task && first.dir && fs.existsSync(first.dir)) {
+  const isPlainContinue = first && !first.task && (!first.prompt || first.prompt === "continue");
+  if (isPlainContinue && first.dir && fs.existsSync(first.dir)) {
     pushState({ phase: "starting", message: "Checking your usage limit…" });
     const p = await probeLimit(first.dir, { timeoutSec: 45 });
     if (!p.error) {

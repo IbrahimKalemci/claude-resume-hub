@@ -4,7 +4,7 @@ const assert = require("node:assert");
 const path = require("node:path");
 const { detectLimit, detectAuthError, parseClockTime, fmtDuration } = require("../lib/detect.js");
 const { buildClaudeArgs } = require("../lib/engine.js");
-const { encodeDir, listSessions, lastAssistantText, pickActiveSession } = require("../lib/sessions.js");
+const { encodeDir, listSessions, lastAssistantText, pickActiveSession, smartPrompt } = require("../lib/sessions.js");
 const { PS_SCRIPT, startTray } = require("../lib/tray.js");
 const statsLib = require("../lib/stats.js");
 const os = require("node:os");
@@ -154,6 +154,18 @@ test("lastAssistantText picks the final assistant text message", () => {
 test("lastAssistantText returns '' when there is no assistant text", () => {
   const lines = [JSON.stringify({ type: "user", message: { role: "user", content: "hi" } })];
   assert.equal(lastAssistantText(lines), "");
+});
+
+test("smartPrompt embeds the recap and asks Claude to finish (not invent work)", () => {
+  const p = smartPrompt("I was fixing the auth bug in login.js");
+  assert.match(p, /Continue where you left off/);
+  assert.match(p, /already complete, say so/);
+  assert.match(p, /fixing the auth bug in login\.js/);
+});
+
+test("smartPrompt returns '' with no recap, so callers fall back to plain continue", () => {
+  assert.equal(smartPrompt(""), "");
+  assert.equal(smartPrompt(null), "");
 });
 
 test("pickActiveSession is consistent with listSessions()[0]", () => {
