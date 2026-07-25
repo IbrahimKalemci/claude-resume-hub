@@ -3,6 +3,32 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.7.0] — 2026-07-25
+
+### Added
+- **Watch mode** — sit in the tray and detect a usage limit you hit in your OWN
+  Claude window by reading the transcript's structured `error:"rate_limit"`
+  entry (no `claude` calls, no quota, no tokens). On detect, the resume is
+  scheduled for the exact reset time. The true set-and-forget path — you don't
+  have to be at the machine when the limit lands.
+- **Multi-account rotation** — when one account hits its limit, rotate to
+  another signed-in account and keep going instead of waiting hours. Each
+  account is its own `CLAUDE_CONFIG_DIR` that Claude itself signed into; the app
+  sets the env var per run and **never reads the credentials**. Only wait — for
+  the soonest reset — if *every* account is limited. Manage accounts + a
+  "Rotate when limited" toggle in Settings.
+- **Run history + "what it did" summary** — every finished run is logged (when,
+  project, outcome, how long it waited, and Claude's last message read locally
+  from the transcript), shown as a collapsible History panel; the summary is
+  also echoed into the Activity log on success.
+
+### Fixed
+- **Active-session guard** — before resuming a specific session whose transcript
+  was written seconds ago (i.e. it's open in another Claude window), the app now
+  warns that resuming it can hang — the footgun behind a resume that "did
+  nothing" (two clients fighting over one conversation). The stuck-watchdog
+  remains the backstop.
+
 ## [1.6.0] — 2026-07-21
 
 ### Added
