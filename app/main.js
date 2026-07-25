@@ -119,12 +119,17 @@ function createWindow() {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      sandbox: true, // preload only uses contextBridge/ipcRenderer, which work sandboxed
     },
   });
 
   win.setMenuBarVisibility(false);
   win.loadFile(path.join(__dirname, "renderer", "index.html"));
+
+  // Harden navigation: this is a fixed local page. Never let content open new
+  // windows or navigate away (a defence-in-depth backstop around the renderer).
+  win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  win.webContents.on("will-navigate", (e) => e.preventDefault());
 
   // Closing hides to tray instead of quitting — it's a background app.
   win.on("close", (e) => {
@@ -350,8 +355,17 @@ function runAttempt(job, account, stopOnLimit, ctx) {
 // Run a job to completion, rotating across accounts when enabled: try each
 // account; the first that ISN'T limited runs it. Only if EVERY account is
 // limited do we wait — for the soonest reset — then resume on that account.
+//
+// IMPORTANT: rotation only applies to account-INDEPENDENT work (a task / fresh
+// session). A specific-session resume (job.sessionId) is tied to ONE account —
+// each account has its own transcripts under its own CLAUDE_CONFIG_DIR, so
+// `--resume <id>` on a different account would open an empty/wrong conversation.
+// For those we stay on the active account (waiting it out if limited).
 async function runJob(job, ctx) {
-  const rotate = settings.rotate && allAccounts().length > 1;
+  const rotate = settings.rotate && allAccounts().length > 1 && !job.sessionId;
+  if (settings.rotate && job.sessionId && allAccounts().length > 1) {
+    ctx.logLine("Rotation skipped: resuming a specific session stays on its own account (a session doesn't exist under another account). Rotation applies to new tasks.");
+  }
   if (!rotate) {
     const acct = (allAccounts().find((a) => a.id === settings.activeAccountId)) || allAccounts()[0];
     return runAttempt(job, acct, false, ctx);
@@ -364,6 +378,7 @@ async function runJob(job, ctx) {
     if (stopped) return { ok: false, reason: "stopped" };
     ctx.logLine(`Trying account “${acct.label}”…`);
     const r = await runAttempt(job, acct, true, ctx);
+    if (stopped || r.reason === "stopped") return { ok: false, reason: "stopped" }; // user hit Stop — do NOT switch account or try the next
     if (r.ok) {
       if (acct.id !== settings.activeAccountId) { switchActive(acct.id); ctx.logLine(`Switched active account to “${acct.label}”.`); }
       return r;
@@ -527,7 +542,13 @@ ipcMain.handle("start", async (_e, opts) => {
 });
 ipcMain.handle("stop", () => stopEngine());
 ipcMain.handle("getQueue", () => queue);
-ipcMain.handle("openExternal", (_e, url) => shell.openExternal(url));
+ipcMain.handle("openExternal", (_e, url) => {
+  // Only ever open http(s) links (the update banner's GitHub URL). Refuse file:,
+  // ms-*, custom protocol handlers etc. — a compromised renderer must not be able
+  // to launch arbitrary OS handlers via this channel.
+  try { const u = new URL(String(url)); if (u.protocol === "http:" || u.protocol === "https:") return shell.openExternal(u.href); } catch { /* ignore */ }
+  return false;
+});
 ipcMain.handle("getUpdate", () => updateInfo);
 ipcMain.handle("getStats", () => stats.load(statsFile()));
 ipcMain.handle("getAccount", () => account.status());
@@ -603,5 +624,5 @@ if (!app.requestSingleInstanceLock()) {
 
   // Background app: don't quit when the window is closed.
   app.on("window-all-closed", (e) => { if (e && e.preventDefault) e.preventDefault(); });
-  app.on("before-quit", () => { quitting = true; try { stopWatch(); if (engine) engine.stop(); } catch { /* ignore */ } });
+  app.on("before-quit", () => { quitting = true; stopped = true; try { stopWatch(); if (engine) engine.stop(); } catch { /* ignore */ } });
 }

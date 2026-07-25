@@ -208,6 +208,14 @@ test("limitFromTranscript: detects a rate_limit end, ignores prose, respects rec
 
     write("prose", [user("explain the usage limit reached marker"), asst("sure...")]);
     assert.equal(limitFromTranscript(testDir, "prose").limited, false); // prose must not false-positive
+
+    // A tool_result echo written AFTER the rate_limit must NOT mask the limit
+    // (regression: watch mode's heart was silently missing real limits).
+    const toolResult = JSON.stringify({ type: "user", message: { role: "user", content: [{ type: "tool_result", tool_use_id: "x", content: "ok" }] } });
+    write("masked", [user("go"), rl("hit your session limit · resets 11pm"), toolResult]);
+    const m = limitFromTranscript(testDir, "masked");
+    assert.equal(m.limited, true, "tool_result echo must not mask the limit");
+    assert.ok(m.resetAt instanceof Date);
   } finally {
     try { fs.rmSync(folder, { recursive: true, force: true }); } catch { /* ignore */ }
   }
