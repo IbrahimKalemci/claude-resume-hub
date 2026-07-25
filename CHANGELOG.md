@@ -3,6 +3,36 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.7.1] — 2026-07-26
+
+Hardening release after a 6-auditor + 5-advisor review of the 1.7.0 features.
+
+### Security
+- **Fixed a stored XSS that could reach code execution.** The History (and queue/
+  session/account) rows rendered untrusted strings — Claude's own transcript text,
+  task strings, filenames — via `innerHTML`. A crafted assistant message could
+  inject markup that reached `window.api` and launched `claude
+  --dangerously-skip-permissions`. All dynamic rows now build DOM with
+  `textContent`; the renderer's inline script was moved to `renderer.js` and
+  `script-src 'unsafe-inline'` was dropped (now `'self'`).
+- **Electron hardened:** `sandbox: true`; `openExternal` only opens http(s) URLs;
+  new-window and in-page navigation are denied.
+
+### Fixed
+- A run **stopped by the user** (Stop / quit) no longer reports success. It
+  returned `{ok:true}`, so account rotation read it as a win and silently switched
+  the active account on Stop, and the queue logged a false "Done".
+- **Watch mode** no longer misses a real limit when a `tool_result` line follows
+  the `rate_limit` entry in the transcript (it was masking the limit).
+- **Multi-account rotation** now applies only to account-independent **task** jobs;
+  a specific-session resume stays on its own account (sessions live per
+  `CLAUDE_CONFIG_DIR`, so `--resume <id>` on another account would open the wrong
+  conversation).
+
+### Changed
+- Multi-account rotation is labelled **experimental** in the UI, with a note that
+  it is for your own separate accounts and applies to new tasks.
+
 ## [1.7.0] — 2026-07-25
 
 ### Added

@@ -7,7 +7,8 @@
     en: {
       settings: "Settings", back: "Back", account: "Account",
       signin: "Sign in / switch account", signout: "Sign out",
-      rotate: "Rotate accounts when limited", addAccount2: "+ Add account",
+      rotate: "Rotate accounts when limited · experimental", addAccount2: "+ Add account",
+      rotateHint: "For new tasks across your OWN separate accounts. A specific-session resume stays on its account.",
       acctHint: "Uses Claude Code's own claude auth login — this app never sees or stores your token.",
       language: "Language", buffer: "Resume buffer (seconds after reset)",
       smartDefault: "Smart resume by default", autostart: "Start minimised to tray",
@@ -41,7 +42,8 @@
     tr: {
       settings: "Ayarlar", back: "Geri", account: "Hesap",
       signin: "Giriş yap / hesap değiştir", signout: "Çıkış yap",
-      rotate: "Limit dolunca hesap değiştir", addAccount2: "+ Hesap ekle",
+      rotate: "Limit dolunca hesap değiştir · deneysel", addAccount2: "+ Hesap ekle",
+      rotateHint: "KENDİ ayrı hesapların arasında, yeni görevler için. Belirli bir oturum devam ederken kendi hesabında kalır.",
       acctHint: "Claude Code'un kendi claude auth login'ini kullanır — bu uygulama token'ını asla görmez/saklamaz.",
       language: "Dil", buffer: "Devam tamponu (reset sonrası saniye)",
       smartDefault: "Varsayılan akıllı devam", autostart: "Tepsiye küçültülmüş başlat",
