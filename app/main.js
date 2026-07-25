@@ -39,6 +39,10 @@ let state = { phase: "idle", cycle: 0, maxCycles: 100, resetAt: null, wakeAt: nu
 let settings = {
   dir: "", smart: true, buffer: 30, autoStart: false,
   notify: { webhook: "", telegram: { botToken: "", chatId: "" } },
+  // Multi-account rotation (token-free — each account is its own CLAUDE_CONFIG_DIR
+  // that Claude itself signed into; we never read the credentials). accounts holds
+  // EXTRA accounts; the default (~/.claude) account is always implicitly present.
+  accounts: [], rotate: false, activeAccountId: "default", defaultLabel: "",
 };
 
 // ---------------------------------------------------------------------------
@@ -187,6 +191,7 @@ let watchTimer = null;
 let watchStopped = false;
 let watchDetectedAt = 0;
 let watchedWaitMs = 0; // wait accrued during watch mode, carried into the run's history entry
+let jobSleepTimer = null; // the "all accounts limited" wait timer
 const WATCH_POLL_MS = 30000;
 
 function stopWatch() {
@@ -239,6 +244,30 @@ function startWatch(job) {
   return { ok: true, watching: true };
 }
 
+// --- multi-account helpers (token-free: a config dir per account) -----------
+function accountsRoot() { return path.join(app.getPath("userData"), "accounts"); }
+function configDirFor(id) {
+  if (!id || id === "default") return null; // default account = ~/.claude
+  return path.join(accountsRoot(), id);
+}
+function activeConfigDir() { return configDirFor(settings.activeAccountId); }
+
+/** The default account plus any extras, as [{id,label,configDir}]. */
+function allAccounts() {
+  const def = { id: "default", label: settings.defaultLabel || "Default account", configDir: null };
+  const extras = (settings.accounts || []).map((a) => ({
+    id: a.id, label: a.label || a.email || a.id, configDir: configDirFor(a.id),
+  }));
+  return [def, ...extras];
+}
+
+/** Rotation order: the active account first, then the rest. */
+function rotationOrder() {
+  const all = allAccounts();
+  const active = all.find((a) => a.id === settings.activeAccountId) || all[0];
+  return [active].concat(all.filter((a) => a.id !== active.id));
+}
+
 function startJobs(jobs) {
   if (engine) return { ok: false, error: "already running" };
   const valid = (jobs || []).filter((j) => j && j.dir && fs.existsSync(j.dir));
@@ -251,13 +280,114 @@ function startJobs(jobs) {
   return { ok: true };
 }
 
-function runNext() {
+function switchActive(id) {
+  settings.activeAccountId = id;
+  saveSettings();
+  send("accounts", accountsPayload());
+}
+
+function sleepUntil(wakeAt) {
+  return new Promise((resolve) => {
+    const tick = () => {
+      if (stopped) return resolve();
+      const remaining = wakeAt - Date.now();
+      if (remaining <= 0) return resolve();
+      jobSleepTimer = setTimeout(tick, Math.min(remaining, 15 * 60 * 1000));
+    };
+    tick();
+  });
+}
+
+// Run ONE engine attempt for `job` on `account`. When stopOnLimit is true the
+// engine hands a limit straight back (reason:"limit") so the caller can rotate
+// to another account instead of waiting. Resolves the engine result.
+function runAttempt(job, account, stopOnLimit, ctx) {
+  return new Promise((resolve) => {
+    let prompt = job.prompt;
+    if (job.smart && !job.task && prompt === "continue") {
+      const sp = smartPrompt(sessionRecap(job.dir));
+      if (sp) prompt = sp;
+    }
+    engine = new AutoResumeEngine({
+      prompt, task: job.task, session: job.sessionId, dir: job.dir,
+      buffer: job.buffer, unattended: job.unattended, poll: 5, maxCycles: 100,
+      verbose: false, passthrough: [], configDir: account.configDir, stopOnLimit,
+    });
+
+    const acctTag = allAccounts().length > 1 ? ` · ${account.label}` : "";
+    let last = state.phase;
+    let waitStart = 0;
+    engine.on("state", (s) => {
+      pushState(Object.assign({}, s, { queueIndex: qIndex, queueTotal: queue.length, project: job.label + acctTag }));
+      if (s.phase !== last) {
+        if (s.phase === "waiting") { waitStart = Date.now(); notify("⏳ Usage limit hit", ctx.prefix + (s.message || "Waiting for the reset")); }
+        if (s.phase === "running" && last === "waiting") {
+          if (waitStart) { const w = Date.now() - waitStart; ctx.jobWaitMs += w; try { send("stats", stats.record(statsFile(), job.label, w)); } catch { /* ignore */ } }
+          notify("▶ Limit reset — resumed", job.label);
+        }
+        last = s.phase;
+      }
+    });
+    engine.on("log", (line) => send("log", { t: new Date().toLocaleTimeString(), line: ctx.prefix + line }));
+    engine.on("output", (chunk) => send("output", chunk));
+
+    pushState({
+      phase: "starting",
+      message: ctx.prefix + (job.task ? "Starting a new session…" : "Resuming session…") + acctTag,
+      queueIndex: qIndex, queueTotal: queue.length, project: job.label,
+    });
+
+    engine.run()
+      .then((r) => { engine = null; resolve(r || { ok: false, reason: "error" }); })
+      .catch(() => { engine = null; resolve({ ok: false, reason: "error" }); });
+  });
+}
+
+// Run a job to completion, rotating across accounts when enabled: try each
+// account; the first that ISN'T limited runs it. Only if EVERY account is
+// limited do we wait — for the soonest reset — then resume on that account.
+async function runJob(job, ctx) {
+  const rotate = settings.rotate && allAccounts().length > 1;
+  if (!rotate) {
+    const acct = (allAccounts().find((a) => a.id === settings.activeAccountId)) || allAccounts()[0];
+    return runAttempt(job, acct, false, ctx);
+  }
+
+  const order = rotationOrder();
+  let best = null; // { account, resetAt } — earliest reset among limited accounts
+  for (const acct of order) {
+    if (stopped) return { ok: false, reason: "stopped" };
+    ctx.logLine(`Trying account “${acct.label}”…`);
+    const r = await runAttempt(job, acct, true, ctx);
+    if (r.reason !== "limit") {
+      if (r.ok && acct.id !== settings.activeAccountId) { switchActive(acct.id); ctx.logLine(`Switched active account to “${acct.label}”.`); }
+      return r; // success, or a real error (auth/stuck/error) — stop trying
+    }
+    ctx.logLine(`“${acct.label}” is limited${r.resetAt ? ` (resets ${r.resetAt.toLocaleTimeString()})` : ""}. Trying the next account…`);
+    if (r.resetAt && (!best || !best.resetAt || r.resetAt < best.resetAt)) best = { account: acct, resetAt: r.resetAt };
+    else if (!best) best = { account: acct, resetAt: r.resetAt };
+  }
+
+  // Every account limited — wait for the soonest reset, then resume that one.
+  if (best && best.resetAt) {
+    const wakeAt = new Date(best.resetAt.getTime() + (job.buffer || 30) * 1000);
+    ctx.jobWaitMs += Math.max(0, wakeAt - Date.now());
+    pushState({ phase: "waiting", resetAt: best.resetAt, wakeAt, message: `All accounts limited — resuming “${best.account.label}” at ${wakeAt.toLocaleTimeString()}` });
+    notify("⏳ All accounts limited", `Resuming “${best.account.label}” at ${wakeAt.toLocaleTimeString()}`);
+    ctx.logLine(`All accounts are limited. Waiting for the soonest reset (“${best.account.label}”, ${best.resetAt.toLocaleTimeString()}).`);
+    await sleepUntil(wakeAt);
+    if (stopped) return { ok: false, reason: "stopped" };
+    if (best.account.id !== settings.activeAccountId) switchActive(best.account.id);
+    return runAttempt(job, best.account, false, ctx);
+  }
+  return { ok: false, reason: "limit" };
+}
+
+async function runNext() {
   if (stopped) return;
   qIndex++;
   if (qIndex >= queue.length) {
     send("queue", queue);
-    // Keep the engine's nuanced message for a single project (e.g. "no usage
-    // limit was active"); only override when several projects ran.
     const msg = queue.length > 1 ? "All projects done." : (state.message || "Done.");
     pushState({ phase: "done", message: msg, queueIndex: qIndex, queueTotal: queue.length });
     return;
@@ -268,6 +398,8 @@ function runNext() {
 
   const prefix = queue.length > 1 ? `[${qIndex + 1}/${queue.length}] ${job.label}: ` : "";
   const logLine = (line) => send("log", { t: new Date().toLocaleTimeString(), line: prefix + line });
+  const ctx = { prefix, logLine, jobWaitMs: watchedWaitMs };
+  watchedWaitMs = 0;
 
   // Active-session guard: if we're resuming a specific session whose transcript
   // was written seconds ago, it's probably open in another Claude window right
@@ -279,81 +411,43 @@ function runNext() {
     notify("⚠ Session may be open elsewhere", job.label);
   }
 
-  // Smart resume: for a plain "continue" (no task), read the session's last step
-  // locally and nudge Claude to pick up exactly there instead of a bare
-  // "continue". Mirrors the CLI's --smart. No AI/network — just the transcript.
-  let prompt = job.prompt;
-  if (job.smart && !job.task && prompt === "continue") {
-    const sp = smartPrompt(sessionRecap(job.dir));
-    if (sp) prompt = sp;
+  const r = await runJob(job, ctx);
+  if (stopped) return;
+
+  // Record the finished run (outcome + "what it did" summary) for history — the
+  // summary is Claude's last message, read locally from the transcript.
+  const outcome = r && r.ok ? "done" : r && r.reason === "auth" ? "auth" : r && r.reason === "stuck" ? "stuck" : r && r.reason === "limit" ? "error" : "error";
+  let summary = "";
+  try { summary = sessionRecap(job.dir) || ""; } catch { /* ignore */ }
+  try { send("stats", stats.recordRun(statsFile(), { project: job.label, outcome, waitMs: ctx.jobWaitMs, summary })); } catch { /* ignore */ }
+  if (outcome === "done" && summary) logLine("✔ What it did: " + summary.slice(0, 200) + (summary.length > 200 ? "…" : ""));
+
+  job.status = r && r.ok ? "done" : "error";
+  send("queue", queue);
+  if (r && r.ok) { notify("✅ Done", job.label); return runNext(); }
+  if (r && r.reason === "auth") {
+    stopped = true;
+    notify("🔑 Sign-in needed", state.message || "Run `claude login`, then start again.");
+    return;
   }
-
-  engine = new AutoResumeEngine({
-    prompt, task: job.task, session: job.sessionId, dir: job.dir,
-    buffer: job.buffer, unattended: job.unattended, poll: 5, maxCycles: 100, verbose: false, passthrough: [],
-  });
-
-  let last = state.phase;
-  let waitStart = 0;
-  let jobWaitMs = watchedWaitMs; // carry any wait already accrued while watching
-  watchedWaitMs = 0;
-  engine.on("state", (s) => {
-    pushState(Object.assign({}, s, { queueIndex: qIndex, queueTotal: queue.length, project: job.label }));
-    if (s.phase !== last) {
-      if (s.phase === "waiting") { waitStart = Date.now(); notify("⏳ Usage limit hit", prefix + (s.message || "Waiting for the reset")); }
-      if (s.phase === "running" && last === "waiting") {
-        if (waitStart) { const w = Date.now() - waitStart; jobWaitMs += w; try { send("stats", stats.record(statsFile(), job.label, w)); } catch { /* ignore */ } }
-        notify("▶ Limit reset — resumed", job.label);
-      }
-      last = s.phase;
-    }
-  });
-  engine.on("log", (line) => send("log", { t: new Date().toLocaleTimeString(), line: prefix + line }));
-  engine.on("output", (chunk) => send("output", chunk));
-
-  pushState({
-    phase: "starting",
-    message: prefix + (job.task ? "Starting a new session…" : "Resuming session…"),
-    queueIndex: qIndex, queueTotal: queue.length, project: job.label,
-  });
-
-  // Record the finished run (outcome + "what it did" summary) for the history
-  // panel. The summary is Claude's last message, read locally from the
-  // transcript — no tokens, no network.
-  const logRun = (outcome) => {
-    let summary = "";
-    try { summary = sessionRecap(job.dir) || ""; } catch { /* ignore */ }
-    try { send("stats", stats.recordRun(statsFile(), { project: job.label, outcome, waitMs: jobWaitMs, summary })); } catch { /* ignore */ }
-    if (outcome === "done" && summary) logLine("✔ What it did: " + summary.slice(0, 200) + (summary.length > 200 ? "…" : ""));
-  };
-
-  engine.run()
-    .then((r) => {
-      engine = null;
-      job.status = r && r.ok ? "done" : "error";
-      send("queue", queue);
-      if (r && r.ok) { logRun("done"); notify("✅ Done", job.label); return runNext(); }
-      // An auth failure hits every project the same way — stop the whole queue.
-      if (r && r.reason === "auth") {
-        stopped = true;
-        logRun("auth");
-        notify("🔑 Sign-in needed", state.message || "Run `claude login`, then start again.");
-        return;
-      }
-      logRun(r && r.reason === "stuck" ? "stuck" : "error");
-      notify("⚠ " + job.label, state.message || "Stopped");
-      runNext(); // other errors: skip to the next project
-    })
-    .catch(() => { engine = null; job.status = "error"; logRun("error"); send("queue", queue); runNext(); });
+  notify("⚠ " + job.label, state.message || "Stopped");
+  runNext(); // other errors: skip to the next project
 }
 
 function stopEngine() {
   stopped = true;
   stopWatch();
+  if (jobSleepTimer) { clearTimeout(jobSleepTimer); jobSleepTimer = null; }
   if (engine) { try { engine.stop(); } catch { /* ignore */ } engine = null; }
   queue.forEach((j) => { if (j.status === "running" || j.status === "queued") j.status = "stopped"; });
   send("queue", queue);
   pushState({ phase: "idle", message: "Stopped.", resetAt: null, wakeAt: null });
+}
+
+// Snapshot of accounts for the renderer: the list (default + extras), which is
+// active, and whether rotation is on. Emails/labels only — never tokens.
+function accountsPayload() {
+  return { accounts: allAccounts(), activeId: settings.activeAccountId, rotate: !!settings.rotate };
 }
 
 // ---------------------------------------------------------------------------
@@ -389,9 +483,11 @@ ipcMain.handle("start", async (_e, opts) => {
   // NOW — it must never be swallowed by the "no active limit" pre-check.
   const first = jobs[0];
   const isPlainContinue = first && !first.task && (!first.prompt || first.prompt === "continue");
-  if (isPlainContinue && first.dir && fs.existsSync(first.dir)) {
+  // With rotation on, skip the single-account pre-check — runJob probes each
+  // account itself (a limited active account just rotates to a free one).
+  if (isPlainContinue && !settings.rotate && first.dir && fs.existsSync(first.dir)) {
     pushState({ phase: "starting", message: "Checking your usage limit…" });
-    const p = await probeLimit(first.dir, { timeoutSec: 45 });
+    const p = await probeLimit(first.dir, { timeoutSec: 45, configDir: activeConfigDir() });
     if (!p.error) {
       if (p.auth) {
         pushState({ phase: "error", message: p.authMsg });
@@ -418,6 +514,41 @@ ipcMain.handle("getStats", () => stats.load(statsFile()));
 ipcMain.handle("getAccount", () => account.status());
 ipcMain.handle("accountLogin", () => account.login());
 ipcMain.handle("accountLogout", async () => { const r = await account.logout(); return { ok: r.code === 0 }; });
+
+// --- multi-account IPC (token-free) -----------------------------------------
+ipcMain.handle("getAccounts", () => accountsPayload());
+ipcMain.handle("setRotate", (_e, on) => { settings.rotate = !!on; saveSettings(); return accountsPayload(); });
+ipcMain.handle("switchAccount", (_e, id) => { switchActive(id || "default"); return accountsPayload(); });
+// Refresh the label of an account by reading its (non-secret) email.
+ipcMain.handle("refreshAccounts", async () => {
+  try {
+    const d = await account.status(null);
+    settings.defaultLabel = d.email || "Default account";
+  } catch { /* ignore */ }
+  for (const a of settings.accounts || []) {
+    try { const s = await account.status(configDirFor(a.id)); if (s.email) { a.email = s.email; a.label = s.email; } } catch { /* ignore */ }
+  }
+  saveSettings();
+  return accountsPayload();
+});
+// Add an account: mint a config dir and launch Claude's own sign-in into it.
+ipcMain.handle("addAccount", (_e, label) => {
+  const id = "acct-" + Date.now().toString(36);
+  const dir = configDirFor(id);
+  try { fs.mkdirSync(dir, { recursive: true }); } catch { /* ignore */ }
+  settings.accounts = (settings.accounts || []).concat([{ id, label: label || "New account", email: null }]);
+  saveSettings();
+  account.login(dir); // interactive OAuth INTO this dir — we never see the token
+  send("accounts", accountsPayload());
+  return { ok: true, id };
+});
+ipcMain.handle("removeAccount", (_e, id) => {
+  settings.accounts = (settings.accounts || []).filter((a) => a.id !== id);
+  if (settings.activeAccountId === id) settings.activeAccountId = "default";
+  try { fs.rmSync(configDirFor(id), { recursive: true, force: true }); } catch { /* ignore */ }
+  saveSettings();
+  return accountsPayload();
+});
 ipcMain.handle("testNotify", async (_e, cfg) => {
   const res = await notifyRemote(cfg || settings.notify, "🔔 claude-resume-hub", "Test notification — it works!");
   if (!res.length) return { ok: false, error: "no channel configured" };

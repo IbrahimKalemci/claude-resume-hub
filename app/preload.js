@@ -24,7 +24,16 @@ contextBridge.exposeInMainWorld("api", {
   accountLogin: () => ipcRenderer.invoke("accountLogin"),
   accountLogout: () => ipcRenderer.invoke("accountLogout"),
 
+  // multi-account
+  getAccounts: () => ipcRenderer.invoke("getAccounts"),
+  refreshAccounts: () => ipcRenderer.invoke("refreshAccounts"),
+  setRotate: (on) => ipcRenderer.invoke("setRotate", on),
+  switchAccount: (id) => ipcRenderer.invoke("switchAccount", id),
+  addAccount: (label) => ipcRenderer.invoke("addAccount", label),
+  removeAccount: (id) => ipcRenderer.invoke("removeAccount", id),
+
   onState: (cb) => ipcRenderer.on("state", (_e, s) => cb(s)),
+  onAccounts: (cb) => ipcRenderer.on("accounts", (_e, a) => cb(a)),
   onLog: (cb) => ipcRenderer.on("log", (_e, l) => cb(l)),
   onOutput: (cb) => ipcRenderer.on("output", (_e, chunk) => cb(chunk)),
   onUpdate: (cb) => ipcRenderer.on("update", (_e, info) => cb(info)),

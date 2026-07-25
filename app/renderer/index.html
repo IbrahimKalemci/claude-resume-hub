@@ -186,11 +186,19 @@
 
       <h2 style="margin-top:0" data-i18n="account">Account</h2>
       <div class="row" style="margin-bottom:8px"><span id="acctInfo" style="font-size:12.5px;color:var(--dim)">checking…</span></div>
+
+      <!-- multi-account list: click to switch; ✕ to remove an extra account -->
+      <div class="slist" id="acctList" style="margin-bottom:8px"></div>
+      <div class="field" style="margin-bottom:6px">
+        <label for="rotateAcct" data-i18n="rotate">Rotate accounts when limited</label>
+        <label class="toggle"><input type="checkbox" id="rotateAcct" /><span class="switch"></span></label>
+      </div>
       <div class="row" style="gap:8px;margin-bottom:6px">
-        <button class="btn" id="acctLogin" data-i18n="signin">Sign in / switch account</button>
+        <button class="btn" id="acctAdd" data-i18n="addAccount2">+ Add account</button>
+        <button class="btn" id="acctLogin" data-i18n="signin">Sign in / switch</button>
         <button class="btn" id="acctLogout" data-i18n="signout">Sign out</button>
       </div>
-      <div class="hint" data-i18n="acctHint">Uses Claude Code's own claude auth login — this app never sees or stores your token.</div>
+      <div class="hint" data-i18n="acctHint">Uses Claude Code's own claude auth login — this app never sees or stores your token. Each account is a separate local config; rotation switches between them when one hits its limit.</div>
       <div style="border-top:1px solid var(--line);margin:12px 0"></div>
 
       <div class="field">
@@ -332,6 +340,7 @@
     en: {
       settings: "Settings", back: "Back", account: "Account",
       signin: "Sign in / switch account", signout: "Sign out",
+      rotate: "Rotate accounts when limited", addAccount2: "+ Add account",
       acctHint: "Uses Claude Code's own claude auth login — this app never sees or stores your token.",
       language: "Language", buffer: "Resume buffer (seconds after reset)",
       smartDefault: "Smart resume by default", autostart: "Start minimised to tray",
@@ -365,6 +374,7 @@
     tr: {
       settings: "Ayarlar", back: "Geri", account: "Hesap",
       signin: "Giriş yap / hesap değiştir", signout: "Çıkış yap",
+      rotate: "Limit dolunca hesap değiştir", addAccount2: "+ Hesap ekle",
       acctHint: "Claude Code'un kendi claude auth login'ini kullanır — bu uygulama token'ını asla görmez/saklamaz.",
       language: "Dil", buffer: "Devam tamponu (reset sonrası saniye)",
       smartDefault: "Varsayılan akıllı devam", autostart: "Tepsiye küçültülmüş başlat",
@@ -436,6 +446,15 @@
     getAccount: function () { return Promise.resolve({ loggedIn: true, email: "you@example.com", plan: "pro" }); },
     accountLogin: function () { return Promise.resolve({ ok: true }); },
     accountLogout: function () { return Promise.resolve({ ok: true }); },
+    getAccounts: function () { return Promise.resolve({ activeId: "default", rotate: true, accounts: [
+      { id: "default", label: "you@work.com", configDir: null },
+      { id: "acct-1", label: "you@gmail.com", configDir: "…" }
+    ] }); },
+    refreshAccounts: function () { return this.getAccounts(); },
+    setRotate: function () { return this.getAccounts(); },
+    switchAccount: function () { return this.getAccounts(); },
+    addAccount: function () { return Promise.resolve({ ok: true, id: "acct-2" }); },
+    removeAccount: function () { return this.getAccounts(); },
     onState: function () {}, onLog: function () {}
   };
 
@@ -634,7 +653,50 @@
       el.style.color = "var(--err)";
     }
   }
-  function refreshAccount() { if (api.getAccount) api.getAccount().then(renderAccount); }
+  function refreshAccount() { if (api.getAccount) api.getAccount().then(renderAccount); refreshAccounts(); }
+
+  // ---- multi-account list ----
+  function renderAccounts(p) {
+    if (!p) return;
+    $("rotateAcct").checked = !!p.rotate;
+    var list = $("acctList");
+    if (!list) return;
+    list.innerHTML = "";
+    (p.accounts || []).forEach(function (a) {
+      var active = a.id === p.activeId;
+      var row = document.createElement("div");
+      row.className = "srow" + (active ? " sel" : "");
+      row.style.cursor = "pointer";
+      row.innerHTML =
+        '<span class="dot" style="background:' + (active ? "var(--ok)" : "var(--faint)") + '"></span>' +
+        '<div class="txt"><div class="t1 ellipsis">' + (active ? "● " : "") + (a.label || a.id) + "</div></div>";
+      row.onclick = function () { if (!isBusy() && api.switchAccount) api.switchAccount(a.id).then(renderAccounts); };
+      if (a.id !== "default" && !isBusy()) {
+        var x = document.createElement("button");
+        x.className = "linklike"; x.textContent = "✕"; x.style.color = "var(--faint)";
+        x.onclick = function (e) { e.stopPropagation(); if (api.removeAccount) api.removeAccount(a.id).then(renderAccounts); };
+        row.appendChild(x);
+      }
+      list.appendChild(row);
+    });
+  }
+  function refreshAccounts() {
+    if (!api.getAccounts) return;
+    api.getAccounts().then(renderAccounts);
+    if (api.refreshAccounts) api.refreshAccounts().then(renderAccounts); // fill emails/labels
+  }
+  if (api.onAccounts) api.onAccounts(renderAccounts);
+  if ($("rotateAcct")) $("rotateAcct").addEventListener("change", function () {
+    if (api.setRotate) api.setRotate($("rotateAcct").checked).then(renderAccounts);
+  });
+  if ($("acctAdd")) $("acctAdd").onclick = function () {
+    if (!api.addAccount) return;
+    api.addAccount("Account " + new Date().toLocaleTimeString());
+    $("acctInfo").textContent = "opening Claude sign-in for the new account… finish it, then come back";
+    $("acctInfo").style.color = "var(--dim)";
+    var n = 0, iv = setInterval(function () { n++; refreshAccounts(); if (n >= 20) clearInterval(iv); }, 3000);
+  };
+
   $("acctLogin").onclick = function () {
     api.accountLogin();
     $("acctInfo").textContent = "opening Claude sign-in… finish it in the window/browser, then come back";
