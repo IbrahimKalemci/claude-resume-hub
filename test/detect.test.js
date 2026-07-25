@@ -4,7 +4,7 @@ const assert = require("node:assert");
 const path = require("node:path");
 const { detectLimit, detectAuthError, parseClockTime, fmtDuration } = require("../lib/detect.js");
 const { buildClaudeArgs } = require("../lib/engine.js");
-const { encodeDir, listSessions, lastAssistantText, pickActiveSession, smartPrompt } = require("../lib/sessions.js");
+const { encodeDir, listSessions, lastAssistantText, pickActiveSession, smartPrompt, limitFromTranscript } = require("../lib/sessions.js");
 const { PS_SCRIPT, startTray } = require("../lib/tray.js");
 const statsLib = require("../lib/stats.js");
 const os = require("node:os");
@@ -187,6 +187,30 @@ test("stats: record accumulates resumes and total wait time", () => {
   assert.equal(s.waitMs, 90000);
   assert.equal(statsLib.load(f).history.length, 2);
   try { fs.rmSync(f, { force: true }); } catch {}
+});
+
+test("limitFromTranscript: detects a rate_limit end, ignores prose, respects recovery", () => {
+  // Craft transcripts under ~/.claude/projects for a throwaway project, then clean up.
+  const testDir = path.join("C:", "tmp", "crh-test-" + process.pid);
+  const folder = path.join(os.homedir(), ".claude", "projects", encodeDir(testDir));
+  const rl = (txt) => JSON.stringify({ type: "assistant", error: "rate_limit", isApiErrorMessage: true, apiErrorStatus: 429, message: { role: "assistant", content: [{ type: "text", text: txt }] } });
+  const user = (txt) => JSON.stringify({ type: "user", message: { role: "user", content: txt } });
+  const asst = (txt) => JSON.stringify({ type: "assistant", message: { role: "assistant", content: [{ type: "text", text: txt }] } });
+  const write = (id, lines) => { fs.mkdirSync(folder, { recursive: true }); fs.writeFileSync(path.join(folder, id + ".jsonl"), lines.join("\n") + "\n"); };
+  try {
+    write("lim", [user("go"), rl("You've hit your session limit · resets 11pm")]);
+    let r = limitFromTranscript(testDir, "lim");
+    assert.equal(r.limited, true);
+    assert.ok(r.resetAt instanceof Date, "expected a parsed resetAt Date");
+
+    write("recovered", [user("go"), rl("hit your session limit · resets 3pm"), asst("all good now")]);
+    assert.equal(limitFromTranscript(testDir, "recovered").limited, false); // newer normal turn = recovered
+
+    write("prose", [user("explain the usage limit reached marker"), asst("sure...")]);
+    assert.equal(limitFromTranscript(testDir, "prose").limited, false); // prose must not false-positive
+  } finally {
+    try { fs.rmSync(folder, { recursive: true, force: true }); } catch { /* ignore */ }
+  }
 });
 
 test("stats: recordRun logs finished runs (outcome + summary), newest first, capped", () => {
