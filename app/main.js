@@ -13,7 +13,7 @@ const path = require("path");
 const fs = require("fs");
 
 const { AutoResumeEngine, probeLimit } = require("../lib/engine");
-const { listSessions, pickActiveSession, lastActiveProjectDir, sessionRecap, smartPrompt } = require("../lib/sessions");
+const { listSessions, pickActiveSession, lastActiveProjectDir, sessionRecap, smartPrompt, sessionIdleMs, limitFromTranscript } = require("../lib/sessions");
 const { notifyRemote } = require("../lib/notify");
 const { checkUpdate } = require("../lib/update");
 const account = require("../lib/account");
@@ -27,7 +27,7 @@ const COLORS = {
   // idle is the brand terracotta (matches the taskbar icon) so the tray never
   // shows a faint grey blob; phase changes recolour it amber/green/red.
   idle: "#c96442", starting: "#c96442", running: "#c96442",
-  waiting: "#d29922", done: "#3fb950", error: "#f85149",
+  waiting: "#d29922", watching: "#58a6ff", done: "#3fb950", error: "#f85149",
 };
 
 let win = null;
@@ -91,7 +91,7 @@ function refreshTray() {
 }
 
 function busy() {
-  return state.phase === "running" || state.phase === "waiting" || state.phase === "starting";
+  return state.phase === "running" || state.phase === "waiting" || state.phase === "starting" || state.phase === "watching";
 }
 
 function showWindow() {
@@ -176,6 +176,66 @@ function buildJob(opts) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Watch mode: sit in the tray and watch the session's transcript for a usage
+// limit the user hits in their OWN Claude window — no `claude` calls, no quota
+// spent, no tokens read (limitFromTranscript reads the .jsonl only). The moment
+// a limit appears, schedule the resume for its reset time. This is the "set it
+// and forget it" path: you don't have to be at the machine when the limit hits.
+// ---------------------------------------------------------------------------
+let watchTimer = null;
+let watchStopped = false;
+let watchDetectedAt = 0;
+const WATCH_POLL_MS = 30000;
+
+function stopWatch() {
+  watchStopped = true;
+  if (watchTimer) { clearTimeout(watchTimer); watchTimer = null; }
+}
+
+function startWatch(job) {
+  if (engine) return { ok: false, error: "already running" };
+  stopWatch();
+  watchStopped = false;
+  stopped = false;
+  const logLine = (line) => send("log", { t: new Date().toLocaleTimeString(), line });
+
+  pushState({ phase: "watching", resetAt: null, wakeAt: null, message: "Watching for a usage limit — I'll resume the moment you hit one." });
+  logLine(`Watching “${job.label}” for a usage limit (reading the transcript only — no claude calls, no quota).`);
+
+  const scheduleResume = (resetAt) => {
+    const wakeAt = new Date(resetAt.getTime() + (job.buffer || 30) * 1000);
+    watchDetectedAt = Date.now();
+    pushState({ phase: "waiting", resetAt, wakeAt, message: `Limit detected — resuming at ${wakeAt.toLocaleTimeString()}` });
+    notify("⏳ Usage limit detected", `${job.label} — will resume at ${wakeAt.toLocaleTimeString()}`);
+    logLine(`Usage limit detected in the transcript. Resets ${resetAt.toLocaleString()} — resuming at ${wakeAt.toLocaleTimeString()} (+${job.buffer || 30}s).`);
+    const delay = Math.max(0, wakeAt - Date.now());
+    watchTimer = setTimeout(() => {
+      if (watchStopped) return;
+      try { send("stats", stats.record(statsFile(), job.label, Date.now() - watchDetectedAt)); } catch { /* ignore */ }
+      startJobs([job]);
+    }, delay);
+  };
+
+  const tick = () => {
+    if (watchStopped) return;
+    let l = { limited: false };
+    try { l = limitFromTranscript(job.dir, job.sessionId); } catch { /* ignore */ }
+    if (l.limited && l.resetAt && l.resetAt > new Date()) {
+      return scheduleResume(l.resetAt); // stop polling — resume is scheduled
+    }
+    if (l.limited && !l.resetAt) {
+      // Limit but no parseable reset time — try again shortly, then just resume.
+      logLine("Usage limit detected but no reset time in the transcript — will retry a resume soon.");
+      watchTimer = setTimeout(() => { if (!watchStopped) startJobs([job]); }, 5 * 60 * 1000);
+      return;
+    }
+    watchTimer = setTimeout(tick, WATCH_POLL_MS);
+  };
+  tick();
+  return { ok: true, watching: true };
+}
+
 function startJobs(jobs) {
   if (engine) return { ok: false, error: "already running" };
   const valid = (jobs || []).filter((j) => j && j.dir && fs.existsSync(j.dir));
@@ -203,6 +263,19 @@ function runNext() {
   job.status = "running";
   send("queue", queue);
 
+  const prefix = queue.length > 1 ? `[${qIndex + 1}/${queue.length}] ${job.label}: ` : "";
+  const logLine = (line) => send("log", { t: new Date().toLocaleTimeString(), line: prefix + line });
+
+  // Active-session guard: if we're resuming a specific session whose transcript
+  // was written seconds ago, it's probably open in another Claude window right
+  // now. Resuming it makes two clients fight over the same conversation and hang
+  // (the exact footgun behind "it did nothing"). Warn loudly; the watchdog is the
+  // backstop if it does hang. (A brand-new task session has no such conflict.)
+  if (job.sessionId && !job.task && sessionIdleMs(job.dir, job.sessionId) < 45000) {
+    logLine("⚠ This session was active seconds ago — it looks open in another Claude window. Resuming it can hang. Close the other window, or pick a different session.");
+    notify("⚠ Session may be open elsewhere", job.label);
+  }
+
   // Smart resume: for a plain "continue" (no task), read the session's last step
   // locally and nudge Claude to pick up exactly there instead of a bare
   // "continue". Mirrors the CLI's --smart. No AI/network — just the transcript.
@@ -217,7 +290,6 @@ function runNext() {
     buffer: job.buffer, unattended: job.unattended, poll: 5, maxCycles: 100, verbose: false, passthrough: [],
   });
 
-  const prefix = queue.length > 1 ? `[${qIndex + 1}/${queue.length}] ${job.label}: ` : "";
   let last = state.phase;
   let waitStart = 0;
   engine.on("state", (s) => {
@@ -260,6 +332,7 @@ function runNext() {
 
 function stopEngine() {
   stopped = true;
+  stopWatch();
   if (engine) { try { engine.stop(); } catch { /* ignore */ } engine = null; }
   queue.forEach((j) => { if (j.status === "running" || j.status === "queued") j.status = "stopped"; });
   send("queue", queue);
@@ -309,7 +382,10 @@ ipcMain.handle("start", async (_e, opts) => {
         return { ok: false, reason: "auth" };
       }
       if (!p.limited) {
-        pushState({ phase: "idle", resetAt: null, wakeAt: null, message: "No usage limit is active right now — nothing to wait for. Give it a task to run now, or start when you're limited." });
+        // Watch mode: instead of giving up, sit and watch for the limit to
+        // appear (reading the transcript, no quota), then auto-resume on reset.
+        if (opts.watch) return startWatch(first);
+        pushState({ phase: "idle", resetAt: null, wakeAt: null, message: "No usage limit is active right now — nothing to wait for. Turn on Watch to auto-resume when you hit one, or give it a task to run now." });
         notify("ℹ No active limit", "You're not limited right now — nothing to resume.");
         return { ok: true, noLimit: true };
       }
@@ -360,5 +436,5 @@ if (!app.requestSingleInstanceLock()) {
 
   // Background app: don't quit when the window is closed.
   app.on("window-all-closed", (e) => { if (e && e.preventDefault) e.preventDefault(); });
-  app.on("before-quit", () => { quitting = true; try { if (engine) engine.stop(); } catch { /* ignore */ } });
+  app.on("before-quit", () => { quitting = true; try { stopWatch(); if (engine) engine.stop(); } catch { /* ignore */ } });
 }

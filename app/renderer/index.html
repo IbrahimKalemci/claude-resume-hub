@@ -8,7 +8,7 @@
   :root{
     --bg:#0b0e14; --panel1:#131826; --panel2:#0f1420; --line:#232a3d;
     --txt:#e6e9f0; --dim:#8b93a7; --faint:#5a627a;
-    --accent:#c96442; --ok:#3fb950; --warn:#d29922; --err:#f85149;
+    --accent:#c96442; --ok:#3fb950; --warn:#d29922; --err:#f85149; --info:#58a6ff;
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%}
@@ -27,6 +27,7 @@
         padding:3px 9px;border-radius:999px;border:1px solid var(--line);color:var(--dim);-webkit-app-region:no-drag}
   .pill.running{color:var(--accent);border-color:var(--accent)}
   .pill.waiting{color:var(--warn);border-color:var(--warn)}
+  .pill.watching{color:var(--info);border-color:var(--info)}
   .pill.done{color:var(--ok);border-color:var(--ok)}
   .pill.error{color:var(--err);border-color:var(--err)}
   .iconbtn{-webkit-app-region:no-drag;background:none;border:1px solid var(--line);color:var(--dim);
@@ -273,6 +274,7 @@
         <label class="toggle"><input type="checkbox" id="smart" /><span class="switch"></span> <span data-i18n="smart">Smart resume</span></label>
         <label class="toggle"><input type="checkbox" id="newSession" /><span class="switch"></span> <span data-i18n="newSession">New session</span></label>
         <label class="toggle"><input type="checkbox" id="unattended" /><span class="switch"></span> <span data-i18n="unattended">Unattended</span></label>
+        <label class="toggle"><input type="checkbox" id="watchMode" /><span class="switch"></span> <span data-i18n="watch">Watch</span></label>
       </div>
       <div class="hint" id="taskHint" data-i18n="hintContinue">Sends “continue” to the session above when the limit opens.</div>
 
@@ -341,12 +343,14 @@
       contTitle: "Continue", contWhere: " where it left off",
       contSub: "Sends “continue” the moment the limit resets.",
       taskTitle: "Give it a task", taskSub: "Send your own instruction to this same session instead.",
-      smart: "Smart resume", newSession: "New session", unattended: "Unattended",
+      smart: "Smart resume", newSession: "New session", unattended: "Unattended", watch: "Watch",
+      watchingLbl: "Watching", watchingSub: "Watching for a usage limit — I'll resume the moment you hit one.",
       hintContinue: "Sends “continue” to the session above once the limit opens.",
       hintTaskSet: "Sends your instruction to the session above once the limit opens.",
       hintTaskEmpty: "Type the instruction to send to that session.",
       hintNew: "⚠ New session — starts a fresh conversation, it will NOT continue the one above.",
       hintUnattended: " ⚠ Unattended: auto-approves ALL tools (file edits & shell commands) so it finishes without prompts.",
+      hintWatch: "👁 Watch: if you're not limited yet, it sits in the tray and auto-resumes the moment you hit a limit (reads the transcript, no quota).",
       taskPh: "e.g. finish the refactor and run the tests",
       start: "Start", stop: "Stop", startQueue: "Start queue",
       queue: "Queue", queueSub: "— run projects one after another",
@@ -372,12 +376,14 @@
       contTitle: "Devam et", contWhere: " kaldığı yerden",
       contSub: "Limit açılır açılmaz “continue” gönderir.",
       taskTitle: "Bir görev ver", taskSub: "Aynı oturuma kendi talimatını gönder.",
-      smart: "Akıllı devam", newSession: "Yeni oturum", unattended: "Gözetimsiz",
+      smart: "Akıllı devam", newSession: "Yeni oturum", unattended: "Gözetimsiz", watch: "Nöbet",
+      watchingLbl: "Nöbette", watchingSub: "Limit dolmasını gözlüyorum — dolar dolmaz devam ettireceğim.",
       hintContinue: "Limit açılınca yukarıdaki oturuma “continue” gönderir.",
       hintTaskSet: "Limit açılınca talimatını yukarıdaki oturuma gönderir.",
       hintTaskEmpty: "O oturuma gönderilecek talimatı yaz.",
       hintNew: "⚠ Yeni oturum — sıfırdan bir konuşma başlatır, yukarıdakini DEVAM ETTİRMEZ.",
       hintUnattended: " ⚠ Gözetimsiz: TÜM araçları (dosya düzenleme & komut) otomatik onaylar, istemsiz bitirir.",
+      hintWatch: "👁 Nöbet: henüz limitin dolmadıysa tepside bekler, limiti dolar dolmaz otomatik devam ettirir (transcript'i okur, kota harcamaz).",
       taskPh: "örn. refactor'ı bitir ve testleri çalıştır",
       start: "Başlat", stop: "Durdur", startQueue: "Kuyruğu başlat",
       queue: "Kuyruk", queueSub: "— projeleri sırayla çalıştır",
@@ -491,6 +497,13 @@
       big.style.color = "var(--accent)";
       sub.textContent = state.message || t("working");
       meta.textContent = state.cycle ? "cycle " + state.cycle + " / " + state.maxCycles : "";
+    } else if (p === "watching") {
+      label.textContent = t("watchingLbl");
+      big.textContent = "👁";
+      big.classList.add("pulse");
+      big.style.color = "var(--info)";
+      sub.textContent = state.message || t("watchingSub");
+      meta.textContent = "";
     } else if (p === "done") {
       label.textContent = t("status");
       big.textContent = "✓"; big.style.color = "var(--ok)";
@@ -657,6 +670,9 @@
     if ($("unattended").checked) {
       hint.innerHTML += '<b style="color:var(--warn)">' + t("hintUnattended") + '</b>';
     }
+    if ($("watchMode").checked) {
+      hint.innerHTML += '<b style="color:var(--info)"> ' + t("hintWatch") + '</b>';
+    }
     updateButtons();
   }
 
@@ -673,6 +689,7 @@
     if (isNew) j.task = txt || "continue";
     else if (m === "task") { j.sessionId = selectedId; j.prompt = txt; }
     else { j.sessionId = selectedId; j.prompt = "continue"; }
+    j.watch = $("watchMode").checked;
     return j;
   }
 
@@ -712,7 +729,7 @@
   $("start").onclick = function () {
     if (queue.length) {
       addLog({ line: "Starting queue of " + queue.length + " project(s)…" });
-      api.start({ jobs: queue }).then(function (r) {
+      api.start({ jobs: queue, watch: $("watchMode").checked }).then(function (r) {
         if (r && r.ok === false) addLog({ line: "Could not start: " + (r.error || "unknown error") });
       });
       return;
@@ -749,6 +766,7 @@
   });
   $("newSession").addEventListener("change", refreshAction);
   $("unattended").addEventListener("change", refreshAction);
+  $("watchMode").addEventListener("change", refreshAction);
   $("task").addEventListener("input", refreshAction);
   $("stop").onclick = function () { api.stop(); addLog({ line: "Stopped by user." }); };
   function collectNotify() {
