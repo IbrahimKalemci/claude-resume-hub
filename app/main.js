@@ -229,8 +229,11 @@ function startWatch(job) {
     if (watchStopped) return;
     let l = { limited: false };
     try { l = limitFromTranscript(job.dir, job.sessionId); } catch { /* ignore */ }
-    if (l.limited && l.resetAt && l.resetAt > new Date()) {
-      return scheduleResume(l.resetAt); // stop polling — resume is scheduled
+    if (l.limited && l.resetAt) {
+      // Schedule the resume for the reset time. If that time is already in the
+      // past (the limit has since reset), scheduleResume fires immediately
+      // (its delay clamps to 0) — so we resume now instead of polling forever.
+      return scheduleResume(l.resetAt);
     }
     if (l.limited && !l.resetAt) {
       // Limit but no parseable reset time — try again shortly, then just resume.
@@ -270,6 +273,7 @@ function rotationOrder() {
 
 function startJobs(jobs) {
   if (engine) return { ok: false, error: "already running" };
+  stopWatch(); // cancel any pending watch timer so it can't fire a stale resume
   const valid = (jobs || []).filter((j) => j && j.dir && fs.existsSync(j.dir));
   if (!valid.length) return { ok: false, error: "no valid project folder" };
   queue = valid;
@@ -354,21 +358,32 @@ async function runJob(job, ctx) {
   }
 
   const order = rotationOrder();
-  let best = null; // { account, resetAt } — earliest reset among limited accounts
+  let best = null;    // { account, resetAt } — earliest reset among limited accounts
+  let lastErr = null; // last non-limit failure, in case NO account is usable
   for (const acct of order) {
     if (stopped) return { ok: false, reason: "stopped" };
     ctx.logLine(`Trying account “${acct.label}”…`);
     const r = await runAttempt(job, acct, true, ctx);
-    if (r.reason !== "limit") {
-      if (r.ok && acct.id !== settings.activeAccountId) { switchActive(acct.id); ctx.logLine(`Switched active account to “${acct.label}”.`); }
-      return r; // success, or a real error (auth/stuck/error) — stop trying
+    if (r.ok) {
+      if (acct.id !== settings.activeAccountId) { switchActive(acct.id); ctx.logLine(`Switched active account to “${acct.label}”.`); }
+      return r;
     }
-    ctx.logLine(`“${acct.label}” is limited${r.resetAt ? ` (resets ${r.resetAt.toLocaleTimeString()})` : ""}. Trying the next account…`);
-    if (r.resetAt && (!best || !best.resetAt || r.resetAt < best.resetAt)) best = { account: acct, resetAt: r.resetAt };
-    else if (!best) best = { account: acct, resetAt: r.resetAt };
+    if (r.reason === "limit") {
+      ctx.logLine(`“${acct.label}” is limited${r.resetAt ? ` (resets ${r.resetAt.toLocaleTimeString()})` : ""}. Trying the next account…`);
+      if (r.resetAt && (!best || !best.resetAt || r.resetAt < best.resetAt)) best = { account: acct, resetAt: r.resetAt };
+      else if (!best) best = { account: acct, resetAt: r.resetAt };
+      continue;
+    }
+    if (r.reason === "stuck") return r; // session open elsewhere — another account won't help
+    // auth / other error is specific to THIS account (e.g. it was never signed
+    // in). Skip it and keep trying the others — don't let a half-set-up account
+    // abort the whole job when a known-limited account could still resume.
+    ctx.logLine(`“${acct.label}” isn't usable (${r.reason}) — skipping to the next account…`);
+    lastErr = r;
   }
 
-  // Every account limited — wait for the soonest reset, then resume that one.
+  // No account ran. If any were merely limited, wait for the soonest reset and
+  // resume that one; otherwise surface the last real error.
   if (best && best.resetAt) {
     const wakeAt = new Date(best.resetAt.getTime() + (job.buffer || 30) * 1000);
     ctx.jobWaitMs += Math.max(0, wakeAt - Date.now());
@@ -380,7 +395,7 @@ async function runJob(job, ctx) {
     if (best.account.id !== settings.activeAccountId) switchActive(best.account.id);
     return runAttempt(job, best.account, false, ctx);
   }
-  return { ok: false, reason: "limit" };
+  return lastErr || { ok: false, reason: "limit" };
 }
 
 async function runNext() {
@@ -477,15 +492,22 @@ ipcMain.handle("start", async (_e, opts) => {
     ? opts.jobs.map((j) => buildJob(j))
     : [buildJob(opts)];
 
-  // For a PLAIN resume ("continue", no custom instruction), quickly check
-  // whether a limit is actually active. If not, tell the user instead of
-  // quietly running "continue". A custom task/prompt is an instruction to run
-  // NOW — it must never be swallowed by the "no active limit" pre-check.
   const first = jobs[0];
   const isPlainContinue = first && !first.task && (!first.prompt || first.prompt === "continue");
-  // With rotation on, skip the single-account pre-check — runJob probes each
-  // account itself (a limited active account just rotates to a free one).
-  if (isPlainContinue && !settings.rotate && first.dir && fs.existsSync(first.dir)) {
+  const havePlain = isPlainContinue && first.dir && fs.existsSync(first.dir);
+
+  // Watch mode takes precedence and is independent of rotation: sit and watch the
+  // transcript for a limit (no claude calls, no quota) and auto-resume. Its own
+  // poll handles an already-active limit as well as a future one — so we don't
+  // pre-probe here (pre-probing under rotation is exactly what BUG-3 spent quota
+  // doing). A custom task is never watched — it runs now.
+  if (havePlain && opts.watch) return startWatch(first);
+
+  // For a PLAIN resume with rotation OFF, quickly check whether a limit is
+  // actually active. If not, say so instead of quietly running "continue". A
+  // custom task/prompt is an instruction to run NOW — never swallowed here.
+  // (With rotation on, runJob probes each account itself, so we skip this.)
+  if (havePlain && !settings.rotate) {
     pushState({ phase: "starting", message: "Checking your usage limit…" });
     const p = await probeLimit(first.dir, { timeoutSec: 45, configDir: activeConfigDir() });
     if (!p.error) {
@@ -495,9 +517,6 @@ ipcMain.handle("start", async (_e, opts) => {
         return { ok: false, reason: "auth" };
       }
       if (!p.limited) {
-        // Watch mode: instead of giving up, sit and watch for the limit to
-        // appear (reading the transcript, no quota), then auto-resume on reset.
-        if (opts.watch) return startWatch(first);
         pushState({ phase: "idle", resetAt: null, wakeAt: null, message: "No usage limit is active right now — nothing to wait for. Turn on Watch to auto-resume when you hit one, or give it a task to run now." });
         notify("ℹ No active limit", "You're not limited right now — nothing to resume.");
         return { ok: true, noLimit: true };
