@@ -186,6 +186,7 @@ function buildJob(opts) {
 let watchTimer = null;
 let watchStopped = false;
 let watchDetectedAt = 0;
+let watchedWaitMs = 0; // wait accrued during watch mode, carried into the run's history entry
 const WATCH_POLL_MS = 30000;
 
 function stopWatch() {
@@ -212,7 +213,9 @@ function startWatch(job) {
     const delay = Math.max(0, wakeAt - Date.now());
     watchTimer = setTimeout(() => {
       if (watchStopped) return;
-      try { send("stats", stats.record(statsFile(), job.label, Date.now() - watchDetectedAt)); } catch { /* ignore */ }
+      const waited = Date.now() - watchDetectedAt;
+      watchedWaitMs = waited;
+      try { send("stats", stats.record(statsFile(), job.label, waited)); } catch { /* ignore */ }
       startJobs([job]);
     }, delay);
   };
@@ -292,12 +295,14 @@ function runNext() {
 
   let last = state.phase;
   let waitStart = 0;
+  let jobWaitMs = watchedWaitMs; // carry any wait already accrued while watching
+  watchedWaitMs = 0;
   engine.on("state", (s) => {
     pushState(Object.assign({}, s, { queueIndex: qIndex, queueTotal: queue.length, project: job.label }));
     if (s.phase !== last) {
       if (s.phase === "waiting") { waitStart = Date.now(); notify("⏳ Usage limit hit", prefix + (s.message || "Waiting for the reset")); }
       if (s.phase === "running" && last === "waiting") {
-        if (waitStart) { try { send("stats", stats.record(statsFile(), job.label, Date.now() - waitStart)); } catch { /* ignore */ } }
+        if (waitStart) { const w = Date.now() - waitStart; jobWaitMs += w; try { send("stats", stats.record(statsFile(), job.label, w)); } catch { /* ignore */ } }
         notify("▶ Limit reset — resumed", job.label);
       }
       last = s.phase;
@@ -312,22 +317,34 @@ function runNext() {
     queueIndex: qIndex, queueTotal: queue.length, project: job.label,
   });
 
+  // Record the finished run (outcome + "what it did" summary) for the history
+  // panel. The summary is Claude's last message, read locally from the
+  // transcript — no tokens, no network.
+  const logRun = (outcome) => {
+    let summary = "";
+    try { summary = sessionRecap(job.dir) || ""; } catch { /* ignore */ }
+    try { send("stats", stats.recordRun(statsFile(), { project: job.label, outcome, waitMs: jobWaitMs, summary })); } catch { /* ignore */ }
+    if (outcome === "done" && summary) logLine("✔ What it did: " + summary.slice(0, 200) + (summary.length > 200 ? "…" : ""));
+  };
+
   engine.run()
     .then((r) => {
       engine = null;
       job.status = r && r.ok ? "done" : "error";
       send("queue", queue);
-      if (r && r.ok) { notify("✅ Done", job.label); return runNext(); }
+      if (r && r.ok) { logRun("done"); notify("✅ Done", job.label); return runNext(); }
       // An auth failure hits every project the same way — stop the whole queue.
       if (r && r.reason === "auth") {
         stopped = true;
+        logRun("auth");
         notify("🔑 Sign-in needed", state.message || "Run `claude login`, then start again.");
         return;
       }
+      logRun(r && r.reason === "stuck" ? "stuck" : "error");
       notify("⚠ " + job.label, state.message || "Stopped");
       runNext(); // other errors: skip to the next project
     })
-    .catch(() => { engine = null; job.status = "error"; send("queue", queue); runNext(); });
+    .catch(() => { engine = null; job.status = "error"; logRun("error"); send("queue", queue); runNext(); });
 }
 
 function stopEngine() {

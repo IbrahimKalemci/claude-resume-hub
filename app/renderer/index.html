@@ -301,11 +301,13 @@
     </section>
 
     <!-- stats -->
-    <section class="card" style="text-align:center;padding:12px">
-      <div style="font-size:12.5px;color:var(--dim)">
+    <section class="card" style="padding:12px">
+      <div style="font-size:12.5px;color:var(--dim);text-align:center">
         <b id="statResumes" style="color:var(--txt);font-size:15px">0</b> <span data-i18n="statResumes">auto-resumes</span> ·
         <b id="statSaved" style="color:var(--ok);font-size:15px">0m</b> <span data-i18n="statSaved">of waiting saved for you</span>
       </div>
+      <button class="linklike" id="toggleRuns" style="margin-top:8px;display:none">▸ <span data-i18n="history">History</span></button>
+      <div class="slist" id="runsList" style="display:none;margin-top:6px"></div>
     </section>
   </main>
 
@@ -357,7 +359,7 @@
       queueHint: "One account = one reset clock, so queued projects resume in order, not at once.",
       addProject: "+ Add this project",
       activity: "Activity", download: "Download",
-      statResumes: "auto-resumes", statSaved: "of waiting saved for you",
+      statResumes: "auto-resumes", statSaved: "of waiting saved for you", history: "History",
       shield: "Zero tokens · runs locally",
     },
     tr: {
@@ -390,7 +392,7 @@
       queueHint: "Tek hesap = tek reset saati; kuyruktaki projeler aynı anda değil, sırayla devam eder.",
       addProject: "+ Bu projeyi ekle",
       activity: "Etkinlik", download: "İndir",
-      statResumes: "otomatik devam", statSaved: "bekleme kazandırıldı",
+      statResumes: "otomatik devam", statSaved: "bekleme kazandırıldı", history: "Geçmiş",
       shield: "Token yok · yerelde çalışır",
     },
   };
@@ -426,7 +428,11 @@
     getSettings: function () { return Promise.resolve({ dir: "C:\\Users\\you\\Desktop\\my-project", smart: true, buffer: 30, autoStart: false }); },
     saveSettings: function () { return Promise.resolve(); },
     openExternal: function () { return Promise.resolve(); },
-    getStats: function () { return Promise.resolve({ resumes: 7, waitMs: 3 * 3600000 + 40 * 60000, history: [] }); },
+    getStats: function () { return Promise.resolve({ resumes: 7, waitMs: 3 * 3600000 + 40 * 60000, history: [], runs: [
+      { t: Date.now() - 4e5, project: "devamet", outcome: "done", waitMs: 42 * 60000, summary: "Finished the refactor and ran the tests — 30/30 passing." },
+      { t: Date.now() - 9e6, project: "my-api", outcome: "stuck", waitMs: 0, summary: "" },
+      { t: Date.now() - 2e7, project: "devamet", outcome: "done", waitMs: 68 * 60000, summary: "Continued the docs, committed as 'update README'." }
+    ] }); },
     getAccount: function () { return Promise.resolve({ loggedIn: true, email: "you@example.com", plan: "pro" }); },
     accountLogin: function () { return Promise.resolve({ ok: true }); },
     accountLogout: function () { return Promise.resolve({ ok: true }); },
@@ -747,11 +753,39 @@
     var h = Math.floor(m / 60);
     return h + "h " + (m % 60) + "m";
   }
+  var OUTCOME = {
+    done: { icon: "✓", color: "var(--ok)" }, error: { icon: "✕", color: "var(--err)" },
+    stuck: { icon: "⚠", color: "var(--warn)" }, auth: { icon: "🔑", color: "var(--err)" },
+  };
   function renderStats(s) {
     if (!s) return;
     $("statResumes").textContent = s.resumes || 0;
     $("statSaved").textContent = humanDur(s.waitMs);
+
+    var runs = (s.runs || []);
+    $("toggleRuns").style.display = runs.length ? "inline-block" : "none";
+    var list = $("runsList");
+    list.innerHTML = "";
+    runs.slice(0, 20).forEach(function (r) {
+      var o = OUTCOME[r.outcome] || OUTCOME.done;
+      var when = fmtWhen(r.t);
+      var waited = r.waitMs ? " · waited " + humanDur(r.waitMs) : "";
+      var row = document.createElement("div");
+      row.className = "srow";
+      row.innerHTML =
+        '<span class="dot" style="background:' + o.color + '"></span>' +
+        '<div class="txt"><div class="t1 ellipsis">' + o.icon + " " + (r.project || "—") + '</div>' +
+        '<div class="t2 ellipsis">' + when + waited + '</div>' +
+        (r.summary ? '<div class="prev ellipsis" style="margin-top:2px">"' + r.summary + '"</div>' : "") +
+        '</div>';
+      list.appendChild(row);
+    });
   }
+  if ($("toggleRuns")) $("toggleRuns").onclick = function () {
+    var l = $("runsList"), open = l.style.display !== "none";
+    l.style.display = open ? "none" : "flex";
+    $("toggleRuns").innerHTML = (open ? "▸ " : "▾ ") + '<span>' + t("history") + '</span>';
+  };
   if (api.getStats) api.getStats().then(renderStats);
   if (api.onStats) api.onStats(renderStats);
 

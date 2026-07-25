@@ -189,6 +189,19 @@ test("stats: record accumulates resumes and total wait time", () => {
   try { fs.rmSync(f, { force: true }); } catch {}
 });
 
+test("stats: recordRun logs finished runs (outcome + summary), newest first, capped", () => {
+  const f = path.join(os.tmpdir(), "crh-runs-" + process.pid + ".json");
+  try { fs.rmSync(f, { force: true }); } catch {}
+  statsLib.recordRun(f, { project: "a", outcome: "done", waitMs: 1000, summary: "did the thing" });
+  const s = statsLib.recordRun(f, { project: "b", outcome: "stuck", waitMs: 0, summary: "x".repeat(500) });
+  assert.equal(s.runs.length, 2);
+  assert.equal(s.runs[0].project, "b");              // newest first
+  assert.equal(s.runs[0].outcome, "stuck");
+  assert.equal(s.runs[0].summary.length, 240);        // summary capped
+  assert.equal(s.runs[1].summary, "did the thing");
+  try { fs.rmSync(f, { force: true }); } catch {}
+});
+
 test("tray PS_SCRIPT is a NotifyIcon shim; startTray is a no-op off Windows", () => {
   assert.ok(PS_SCRIPT.includes("NotifyIcon"));
   assert.ok(PS_SCRIPT.includes("/status") || PS_SCRIPT.includes('"/status"') || PS_SCRIPT.includes("+ \"/status\""));
