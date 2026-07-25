@@ -3,7 +3,7 @@
 
 /**
  * Print the CHANGELOG.md section for a given version, e.g.:
- *   node scripts/release-notes.js 1.7.0
+ *   node scripts/release-notes.js 1.7.1
  * Used by CI to auto-fill GitHub Release notes — so nobody has to write them by hand.
  */
 
