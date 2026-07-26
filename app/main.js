@@ -18,6 +18,7 @@ const { notifyRemote } = require("../lib/notify");
 const { checkUpdate } = require("../lib/update");
 const account = require("../lib/account");
 const stats = require("../lib/stats");
+const usage = require("../lib/usage");
 const { appIcon } = require("./icon");
 
 const pkg = require("../package.json");
@@ -551,6 +552,13 @@ ipcMain.handle("openExternal", (_e, url) => {
 });
 ipcMain.handle("getUpdate", () => updateInfo);
 ipcMain.handle("getStats", () => stats.load(statsFile()));
+// Token-free local usage analytics (counts from transcripts, not the account).
+ipcMain.handle("getUsage", (_e, opts) => {
+  opts = opts || {};
+  const dir = opts.dir || settings.dir;
+  try { return usage.usageSnapshot(dir, opts.sessionId || null, Date.now() - 24 * 3600 * 1000); }
+  catch { return { session: { input: 0, output: 0, cached: 0, total: 0, turns: 0 }, recent: { input: 0, output: 0, cached: 0, total: 0 } }; }
+});
 ipcMain.handle("getAccount", () => account.status());
 ipcMain.handle("accountLogin", () => account.login());
 ipcMain.handle("accountLogout", async () => { const r = await account.logout(); return { ok: r.code === 0 }; });

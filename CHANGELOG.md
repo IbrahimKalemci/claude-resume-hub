@@ -3,6 +3,32 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.8.0] — 2026-07-26
+
+### Added
+- **"Walk away" preset** — one click sets the full set-and-forget flow (continue +
+  smart + watch + unattended) so the headline scenario works without hunting for
+  toggles. A `reset` link clears it. It configures the controls (doesn't
+  auto-start), so the Unattended warning stays visible before you commit.
+- **Local usage analytics (token-free)** — a tile showing tokens used **this
+  session** and in the **last 24h**, summed from the `message.usage` counts in
+  your own transcripts. No credentials, no account calls — and it's honest about
+  what it can't show: this is consumption, **not** your plan's quota/percent.
+  `lib/usage.js`. Cache-read tokens are tracked separately (they're re-counted
+  every turn) so the headline number stays meaningful.
+
+### Fixed / robustness (cross-platform)
+- **macOS binary now runs on Apple Silicon** — the SEA build is ad-hoc codesigned
+  after `postject` (an unsigned/invalid binary is SIGKILLed on launch on arm64).
+- **`killTree` no longer orphans `claude` on macOS/Linux** — the child is spawned
+  in its own process group and the whole group is killed (previously only the
+  shell wrapper died, leaving `claude` running — the very thing the function
+  promises to prevent). Unchanged on Windows (`taskkill /T`).
+- **Hang-guard is less trigger-happy** — the no-output watchdog default is now
+  **10 min** (was 4), and configurable via `--stuck-minutes`, so a long silent
+  tool (a big test run/build) isn't mistaken for a hang.
+- `postject` is now a pinned devDependency (reproducible SEA builds).
+
 ## [1.7.1] — 2026-07-26
 
 Hardening release after a 6-auditor + 5-advisor review of the 1.7.0 features.

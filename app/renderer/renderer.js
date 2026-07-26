@@ -23,6 +23,7 @@
       contSub: "Sends “continue” the moment the limit resets.",
       taskTitle: "Give it a task", taskSub: "Send your own instruction to this same session instead.",
       smart: "Smart resume", newSession: "New session", unattended: "Unattended", watch: "Watch",
+      presetWalk: "🌙 Walk away", presetReset: "reset", presetWalkLog: "Walk-away preset: continue + smart + watch + unattended. Press Start and leave.",
       watchingLbl: "Watching", watchingSub: "Watching for a usage limit — I'll resume the moment you hit one.",
       hintContinue: "Sends “continue” to the session above once the limit opens.",
       hintTaskSet: "Sends your instruction to the session above once the limit opens.",
@@ -37,6 +38,8 @@
       addProject: "+ Add this project",
       activity: "Activity", download: "Download",
       statResumes: "auto-resumes", statSaved: "of waiting saved for you", history: "History",
+      usageLbl: "Tokens used", usageSession: "this session", usage24h: "last 24h",
+      usageHint: "Local counts from your transcripts — not your plan quota (this app can't see that).",
       shield: "Zero tokens · runs locally",
     },
     tr: {
@@ -58,6 +61,7 @@
       contSub: "Limit açılır açılmaz “continue” gönderir.",
       taskTitle: "Bir görev ver", taskSub: "Aynı oturuma kendi talimatını gönder.",
       smart: "Akıllı devam", newSession: "Yeni oturum", unattended: "Gözetimsiz", watch: "Nöbet",
+      presetWalk: "🌙 Çık git", presetReset: "sıfırla", presetWalkLog: "Çık-git preset'i: devam + akıllı + nöbet + gözetimsiz. Start'a bas ve bırak.",
       watchingLbl: "Nöbette", watchingSub: "Limit dolmasını gözlüyorum — dolar dolmaz devam ettireceğim.",
       hintContinue: "Limit açılınca yukarıdaki oturuma “continue” gönderir.",
       hintTaskSet: "Limit açılınca talimatını yukarıdaki oturuma gönderir.",
@@ -72,6 +76,8 @@
       addProject: "+ Bu projeyi ekle",
       activity: "Etkinlik", download: "İndir",
       statResumes: "otomatik devam", statSaved: "bekleme kazandırıldı", history: "Geçmiş",
+      usageLbl: "Kullanılan token", usageSession: "bu oturum", usage24h: "son 24s",
+      usageHint: "Transcript'lerinden yerel sayımlar — plan kotan değil (uygulama onu göremez).",
       shield: "Token yok · yerelde çalışır",
     },
   };
@@ -107,6 +113,7 @@
     getSettings: function () { return Promise.resolve({ dir: "C:\\Users\\you\\Desktop\\my-project", smart: true, buffer: 30, autoStart: false }); },
     saveSettings: function () { return Promise.resolve(); },
     openExternal: function () { return Promise.resolve(); },
+    getUsage: function () { return Promise.resolve({ session: { input: 71e6, output: 2.7e6, cached: 854e6, total: 73.8e6, turns: 2111 }, recent: { input: 7.3e6, output: 0.38e6, cached: 123e6, total: 7.7e6 } }); },
     getStats: function () { return Promise.resolve({ resumes: 7, waitMs: 3 * 3600000 + 40 * 60000, history: [], runs: [
       { t: Date.now() - 4e5, project: "devamet", outcome: "done", waitMs: 42 * 60000, summary: "Finished the refactor and ran the tests — 30/30 passing." },
       { t: Date.now() - 9e6, project: "my-api", outcome: "stuck", waitMs: 0, summary: "" },
@@ -165,7 +172,7 @@
       txt.appendChild(el("div", "t2 ellipsis", fmtWhen(s.mtime) + " · " + s.turns + " prompts"));
       row.appendChild(el("span", "dot"));
       row.appendChild(txt);
-      row.onclick = function () { selectedId = s.id; renderSessions(); renderActive(); };
+      row.onclick = function () { selectedId = s.id; renderSessions(); renderActive(); loadUsage(); };
       list.appendChild(row);
     });
     if (!sessions.length) { var e = el("div", "faint", "No sessions in this folder yet."); e.style.fontSize = "11px"; list.appendChild(e); }
@@ -278,7 +285,7 @@
     return api.listSessions(settings.dir).then(function (list) {
       sessions = list || [];
       if (!sessions.some(function (x) { return x.id === selectedId; })) selectedId = sessions.length ? sessions[0].id : null;
-      renderSessions(); renderActive();
+      renderSessions(); renderActive(); loadUsage();
     });
   }
 
@@ -495,6 +502,24 @@
     var h = Math.floor(m / 60);
     return h + "h " + (m % 60) + "m";
   }
+  function humanTokens(n) {
+    n = n || 0;
+    if (n >= 1e9) return (n / 1e9).toFixed(1) + "B";
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + "M";
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + "k";
+    return String(n);
+  }
+  function renderUsage(u) {
+    if (!u) return;
+    var s = u.session || {}, r = u.recent || {};
+    $("usageSession").textContent = humanTokens(s.total);
+    $("usage24h").textContent = humanTokens(r.total);
+    var tip = "Session: " + humanTokens(s.input) + " in + " + humanTokens(s.output) + " out"
+      + (s.cached ? " (" + humanTokens(s.cached) + " cached-read, not counted)" : "")
+      + "  ·  new tokens only, local counts — not plan quota.";
+    $("usageTile").title = tip;
+  }
+  function loadUsage() { if (api.getUsage) api.getUsage({ dir: settings.dir, sessionId: selectedId }).then(renderUsage); }
   var OUTCOME = {
     done: { icon: "✓", color: "var(--ok)" }, error: { icon: "✕", color: "var(--err)" },
     stuck: { icon: "⚠", color: "var(--warn)" }, auth: { icon: "🔑", color: "var(--err)" },
@@ -529,6 +554,7 @@
   };
   if (api.getStats) api.getStats().then(renderStats);
   if (api.onStats) api.onStats(renderStats);
+  loadUsage();
 
   if (api.onQueue) api.onQueue(function (q) {
     // main-process queue carries live statuses in the same order
@@ -543,6 +569,34 @@
   $("unattended").addEventListener("change", refreshAction);
   $("watchMode").addEventListener("change", refreshAction);
   $("task").addEventListener("input", refreshAction);
+
+  // Presets. "Walk away" = the flagship set-and-forget flow: continue the pinned
+  // session, smart-resume, watch for the limit, and auto-approve tools so it can
+  // finish while you're gone. It configures the controls (doesn't auto-start), so
+  // the Unattended warning stays visible before you commit.
+  function setMode(v) {
+    var r = document.querySelector('input[name="mode"][value="' + v + '"]');
+    if (r) { r.checked = true; }
+  }
+  $("presetWalk").onclick = function () {
+    setMode("continue");
+    $("newSession").checked = false;
+    $("smart").checked = true;
+    $("unattended").checked = true;
+    $("watchMode").checked = true;
+    refreshAction();
+    addLog({ line: t("presetWalkLog") });
+  };
+  $("presetReset").onclick = function () {
+    setMode("continue");
+    $("newSession").checked = false;
+    $("smart").checked = !!settings.smart;
+    $("unattended").checked = false;
+    $("watchMode").checked = false;
+    $("task").value = "";
+    refreshAction();
+  };
+
   $("stop").onclick = function () { api.stop(); addLog({ line: "Stopped by user." }); };
   function collectNotify() {
     return {

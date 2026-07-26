@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld("api", {
   testNotify: (cfg) => ipcRenderer.invoke("testNotify", cfg),
   getUpdate: () => ipcRenderer.invoke("getUpdate"),
   getStats: () => ipcRenderer.invoke("getStats"),
+  getUsage: (opts) => ipcRenderer.invoke("getUsage", opts),
   getAccount: () => ipcRenderer.invoke("getAccount"),
   accountLogin: () => ipcRenderer.invoke("accountLogin"),
   accountLogout: () => ipcRenderer.invoke("accountLogout"),

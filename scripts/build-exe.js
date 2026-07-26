@@ -51,5 +51,14 @@ let inject = `npx postject "${out}" NODE_SEA_BLOB dist/sea-prep.blob --sentinel-
 if (isMac) inject += " --macho-segment-name NODE_SEA";
 run(inject);
 
+// 6) macOS: postject invalidates the Mach-O signature, and on Apple Silicon an
+//    unsigned/invalidly-signed binary is killed on launch (SIGKILL). Re-sign
+//    ad-hoc so the binary at least runs locally. (A real Developer ID +
+//    notarization is needed to distribute without a Gatekeeper warning.)
+if (isMac) {
+  try { execSync(`codesign --sign - --force "${out}"`, { stdio: "ignore" }); console.log("ad-hoc codesigned (macOS)"); }
+  catch { console.log("codesign unavailable — the mac binary may be killed on arm64 until signed"); }
+}
+
 console.log("\n✔ Built " + out);
 console.log("  Note: this exe wraps Claude Code — the `claude` CLI must be on PATH to use it.");

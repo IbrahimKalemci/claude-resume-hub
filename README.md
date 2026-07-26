@@ -56,6 +56,8 @@ Handy flags: `--list` (see your sessions) · `--session <id>` (resume a specific
 - 👁️ **Watch mode** — not limited yet? It waits in the tray and auto-resumes the instant you hit one — reading the transcript, spending **no quota**
 - 🔄 **Multi-account rotation** *(experimental)* — limit on one of **your own** accounts? It switches to another and keeps going. Token-free — each account is Claude Code's own `claude auth`, never your credentials
 - 📜 **Run history + "what it did"** — every run logged, with Claude's final message as a local summary
+- 🌙 **"Walk away" preset** — one click arms the full set-and-forget flow (continue + smart + watch + unattended)
+- 📊 **Local usage** — tokens used this session / last 24h, counted from your transcripts (consumption, not plan quota — it can't see that)
 - 🎯 **Finds the right session** and pins it (no more resuming the wrong one)
 - 📚 **Multi-project queue** — several projects resume in order on one reset clock
 - 🔔 **Phone/chat alerts** — optional webhook or Telegram ping on reset / done / error
@@ -101,6 +103,8 @@ npx claude-resume-hub            # ...ya da panelsiz
 - 👁️ **Nöbet modu** — henüz limitli değil misin? Tepside bekler, limite takıldığın an devam eder — transcript'i okur, **kota harcamaz**
 - 🔄 **Çoklu hesap rotasyonu** *(deneysel)* — **kendi** hesaplarından birinde limit dolunca diğerine geçip devam eder. Token'sız — her hesap Claude Code'un kendi `claude auth`'u, kimlik bilgin değil
 - 📜 **Çalışma geçmişi + "ne yaptı"** — her çalışma, Claude'un son mesajı yerel özet olarak kaydedilir
+- 🌙 **"Çık git" preset'i** — tek tıkla tam kur-unut akışı (devam + akıllı + nöbet + gözetimsiz)
+- 📊 **Yerel kullanım** — bu oturum / son 24s token'ı, transcript'lerinden sayılır (tüketim; plan kotan değil — onu göremez)
 - 🎯 **Doğru oturumu bulur** ve sabitler (yanlış oturumu devam ettirme derdi yok)
 - 📚 **Çoklu proje kuyruğu** — birden fazla proje tek reset saatinde sırayla devam eder
 - 🔔 **Telefon/sohbet bildirimi** — webhook ya da Telegram ile reset/bitiş/hata bildirimi

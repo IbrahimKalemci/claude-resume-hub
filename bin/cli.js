@@ -21,6 +21,7 @@ function parseArgs(argv) {
     buffer: 30,
     poll: 5,
     maxCycles: 100,
+    stuckMinutes: 10,
     verbose: false,
     list: false,
     smart: false,
@@ -46,6 +47,7 @@ function parseArgs(argv) {
       case "-b": case "--buffer": opts.buffer = parseInt(next(), 10); break;
       case "--poll": opts.poll = parseInt(next(), 10); break;
       case "-m": case "--max-cycles": opts.maxCycles = parseInt(next(), 10); break;
+      case "--stuck-minutes": opts.stuckMinutes = parseInt(next(), 10); break;
       case "-l": case "--list": opts.list = true; break;
       case "--smart": opts.smart = true; break;
       case "--unattended": case "--yolo": opts.unattended = true; break;
@@ -84,6 +86,8 @@ OPTIONS
   -b, --buffer <seconds>  Safety margin added after the reset time (default: 30)
       --poll <minutes>    Retry interval if a reset time can't be determined (default: 5)
   -m, --max-cycles <n>    Max limit->wait->continue cycles (default: 100)
+      --stuck-minutes <n> Kill claude if it emits no output for this long — a hang
+                          guard (default: 10). Raise it for long silent tasks.
   -l, --list              List Claude Code sessions in this project and exit
       --smart             Context-aware resume: reads the session's last step and
                           nudges Claude to pick up exactly there (instead of a bare

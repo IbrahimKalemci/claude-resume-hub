@@ -7,6 +7,7 @@ const { buildClaudeArgs } = require("../lib/engine.js");
 const { encodeDir, listSessions, lastAssistantText, pickActiveSession, smartPrompt, limitFromTranscript } = require("../lib/sessions.js");
 const { PS_SCRIPT, startTray } = require("../lib/tray.js");
 const statsLib = require("../lib/stats.js");
+const usageLib = require("../lib/usage.js");
 const os = require("node:os");
 const fs = require("node:fs");
 
@@ -219,6 +220,31 @@ test("limitFromTranscript: detects a rate_limit end, ignores prose, respects rec
   } finally {
     try { fs.rmSync(folder, { recursive: true, force: true }); } catch { /* ignore */ }
   }
+});
+
+test("usage: entryTokens separates cache-read from the new-token total", () => {
+  const t = usageLib.entryTokens({ message: { usage: { input_tokens: 100, output_tokens: 50, cache_creation_input_tokens: 200, cache_read_input_tokens: 1000 } } });
+  assert.equal(t.input, 300);   // fresh input + cache creation
+  assert.equal(t.output, 50);
+  assert.equal(t.cached, 1000); // cache reads tracked separately
+  assert.equal(t.total, 350);   // total EXCLUDES cache reads (else it balloons)
+  assert.deepEqual(usageLib.entryTokens({}), { input: 0, output: 0, cached: 0, total: 0 });
+});
+
+test("usage: sessionTokens sums assistant turns and ignores non-usage lines", () => {
+  const testDir = path.join("C:", "tmp", "crh-usage-" + process.pid);
+  const folder = path.join(os.homedir(), ".claude", "projects", encodeDir(testDir));
+  const asstU = (i, o) => JSON.stringify({ type: "assistant", message: { role: "assistant", usage: { input_tokens: i, output_tokens: o } } });
+  const user = (txt) => JSON.stringify({ type: "user", message: { role: "user", content: txt } });
+  try {
+    fs.mkdirSync(folder, { recursive: true });
+    fs.writeFileSync(path.join(folder, "s.jsonl"), [user("hi"), asstU(100, 20), asstU(50, 10)].join("\n") + "\n");
+    const s = usageLib.sessionTokens(testDir, "s");
+    assert.equal(s.input, 150);
+    assert.equal(s.output, 30);
+    assert.equal(s.total, 180);
+    assert.equal(s.turns, 2);
+  } finally { try { fs.rmSync(folder, { recursive: true, force: true }); } catch { /* ignore */ } }
 });
 
 test("stats: recordRun logs finished runs (outcome + summary), newest first, capped", () => {
