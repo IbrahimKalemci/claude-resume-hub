@@ -116,6 +116,16 @@
   #log div{white-space:pre-wrap;word-break:break-word}
   #log .t{color:var(--faint);margin-right:6px}
 
+  /* ---------- session picker modal ---------- */
+  .modal{position:fixed;inset:0;z-index:60;background:rgba(4,6,10,.66);display:none;
+         align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(2px)}
+  .modal.open{display:flex}
+  .modalCard{background:linear-gradient(180deg,var(--panel1),var(--panel2));border:1px solid var(--line);
+             border-radius:16px;padding:16px;width:100%;max-width:420px;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+  .modalCard h2{margin:0 0 4px;font-size:14px;font-weight:700}
+  .modalCard .srow{cursor:pointer}
+  .modalCard .srow .proj{font-weight:700;color:var(--txt)}
+
   /* ---------- settings ---------- */
   /* full-screen settings overlay */
   #settings{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;
@@ -348,6 +358,18 @@
       <span data-i18n="shield">Zero tokens · runs locally</span>
     </span>
   </footer>
+</div>
+
+<!-- Start session picker: pick which recent session (any folder / IDE) to continue -->
+<div id="sessionModal" class="modal">
+  <div class="modalCard">
+    <h2 data-i18n="pickTitle">Which session should I continue?</h2>
+    <div class="hint" data-i18n="pickSub" style="margin:0 0 10px">Your most recent sessions across every project (Claude Code, IDE, terminal). Pick one — it resumes from where that conversation left off.</div>
+    <div class="slist" id="pickList" style="max-height:300px"></div>
+    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:12px">
+      <button class="btn" id="pickCancel" data-i18n="cancel">Cancel</button>
+    </div>
+  </div>
 </div>
 
 <script src="renderer.js"></script>

@@ -222,6 +222,19 @@ test("limitFromTranscript: detects a rate_limit end, ignores prose, respects rec
   }
 });
 
+test("recentSessions: returns at most N resumable sessions with dir + project", () => {
+  const r = require("../lib/sessions.js").recentSessions(2);
+  assert.ok(Array.isArray(r));
+  assert.ok(r.length <= 2);
+  for (const s of r) {
+    assert.equal(typeof s.id, "string");
+    assert.equal(typeof s.dir, "string");   // a known working dir → resumable
+    assert.ok(s.dir.length > 0);
+    assert.equal(typeof s.project, "string");
+    assert.ok(s.mtime instanceof Date);
+  }
+});
+
 test("usage: entryTokens separates cache-read from the new-token total", () => {
   const t = usageLib.entryTokens({ message: { usage: { input_tokens: 100, output_tokens: 50, cache_creation_input_tokens: 200, cache_read_input_tokens: 1000 } } });
   assert.equal(t.input, 300);   // fresh input + cache creation

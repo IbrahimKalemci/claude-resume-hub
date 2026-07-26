@@ -3,6 +3,17 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.8.3] — 2026-07-26
+
+### Added
+- **Start → "which session?" picker.** Pressing Start now shows a modal of your
+  most-recently-active sessions across **every** project (Claude Code, IDE,
+  terminal — anything under `~/.claude/projects`), each with its folder, last
+  activity, prompt count and a preview. Pick one and it resumes that exact
+  conversation from where it left off — so choosing a folder is no longer the only
+  lever, and there's no ambiguity about which session continues. A brand-new
+  session skips the picker. `lib/sessions.js: recentSessions()`.
+
 ## [1.8.2] — 2026-07-26
 
 ### Changed / the app handles the conflict itself

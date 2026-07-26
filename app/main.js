@@ -539,6 +539,13 @@ ipcMain.handle("listSessions", (_e, dir) => {
     turns: s.turns, sizeKB: s.sizeKB, preview: s.preview,
   }));
 });
+ipcMain.handle("getRecentSessions", (_e, limit) => {
+  const list = require("../lib/sessions").recentSessions(limit || 5) || [];
+  return list.map((s) => ({
+    id: s.id, dir: s.dir, project: s.project, turns: s.turns, sizeKB: s.sizeKB,
+    mtime: s.mtime instanceof Date ? s.mtime.toISOString() : String(s.mtime), preview: s.preview,
+  }));
+});
 ipcMain.handle("chooseFolder", async () => {
   const r = await dialog.showOpenDialog(win, { properties: ["openDirectory"], defaultPath: settings.dir });
   if (r.canceled || !r.filePaths.length) return null;

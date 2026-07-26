@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld("api", {
   getSettings: () => ipcRenderer.invoke("getSettings"),
   saveSettings: (s) => ipcRenderer.invoke("saveSettings", s),
   listSessions: (dir) => ipcRenderer.invoke("listSessions", dir),
+  getRecentSessions: (limit) => ipcRenderer.invoke("getRecentSessions", limit),
   chooseFolder: () => ipcRenderer.invoke("chooseFolder"),
   start: (opts) => ipcRenderer.invoke("start", opts),
   stop: () => ipcRenderer.invoke("stop"),
