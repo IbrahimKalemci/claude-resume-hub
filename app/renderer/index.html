@@ -197,19 +197,26 @@
       <h2 style="margin-top:0" data-i18n="account">Account</h2>
       <div class="row" style="margin-bottom:8px"><span id="acctInfo" style="font-size:12.5px;color:var(--dim)">checking…</span></div>
 
-      <!-- multi-account list: click to switch; ✕ to remove an extra account -->
+      <!-- Global switch: changes the default account for CLI + IDE, token-free -->
+      <div class="row" style="gap:8px;margin-bottom:6px">
+        <button class="btn primary" id="acctSwitch" data-i18n="switchAcct">Switch account (CLI + IDE)</button>
+        <button class="btn" id="acctLogout" data-i18n="signout">Sign out</button>
+      </div>
+      <div class="hint" data-i18n="switchHint" style="margin-bottom:10px">Signs you into another account for Claude everywhere — the CLI and your IDE — via Claude's own <code>claude auth</code>. This app never sees or stores your tokens. (One browser confirm per switch; instant no-prompt switching would require storing tokens, which this tool won't do.)</div>
+
+      <div style="border-top:1px solid var(--line);margin:10px 0"></div>
+      <div class="row" style="justify-content:space-between;margin-bottom:4px">
+        <span class="faint" data-i18n="rotationHdr" style="font-size:10.5px;text-transform:uppercase;letter-spacing:1px;font-weight:700">Auto-rotation · advanced</span>
+      </div>
+      <!-- multi-account list (separate local configs): click to switch the APP's account; ✕ to remove -->
       <div class="slist" id="acctList" style="margin-bottom:8px"></div>
       <div class="field" style="margin-bottom:6px">
         <label for="rotateAcct" data-i18n="rotate">Rotate accounts when limited · experimental</label>
         <label class="toggle"><input type="checkbox" id="rotateAcct" /><span class="switch"></span></label>
       </div>
-      <div class="hint" data-i18n="rotateHint" style="margin:-2px 0 8px">For new tasks across your OWN separate accounts. A specific-session resume stays on its account.</div>
-      <div class="row" style="gap:8px;margin-bottom:6px">
-        <button class="btn" id="acctAdd" data-i18n="addAccount2">+ Add account</button>
-        <button class="btn" id="acctLogin" data-i18n="signin">Sign in / switch</button>
-        <button class="btn" id="acctLogout" data-i18n="signout">Sign out</button>
-      </div>
-      <div class="hint" data-i18n="acctHint">Uses Claude Code's own claude auth login — this app never sees or stores your token. Each account is a separate local config; rotation switches between them when one hits its limit.</div>
+      <div class="hint" data-i18n="rotateHint" style="margin:-2px 0 8px">For NEW tasks across your own separate accounts, so an overnight run can switch when one hits its limit. Each is a separate local config (its own sessions); doesn't change your IDE. A specific-session resume stays on its account.</div>
+      <button class="btn" id="acctAdd" data-i18n="addAccount2" style="margin-bottom:2px">+ Add rotation account</button>
+      <div class="hint" data-i18n="acctHint">Uses Claude Code's own claude auth login — this app never sees or stores your token.</div>
       <div style="border-top:1px solid var(--line);margin:12px 0"></div>
 
       <div class="field">

@@ -7,8 +7,11 @@
     en: {
       settings: "Settings", back: "Back", account: "Account",
       signin: "Sign in / switch account", signout: "Sign out",
-      rotate: "Rotate accounts when limited · experimental", addAccount2: "+ Add account",
-      rotateHint: "For new tasks across your OWN separate accounts. A specific-session resume stays on its account.",
+      switchAcct: "Switch account (CLI + IDE)", rotationHdr: "Auto-rotation · advanced",
+      switchHint: "Signs you into another account for Claude everywhere — the CLI and your IDE — via Claude's own claude auth. This app never sees or stores your tokens. (One browser confirm per switch; instant no-prompt switching would require storing tokens, which this tool won't do.)",
+      switchOpening: "Opening Claude sign-in… pick the other account in the window/browser, then come back.",
+      rotate: "Rotate accounts when limited · experimental", addAccount2: "+ Add rotation account",
+      rotateHint: "For NEW tasks across your own separate accounts, so an overnight run can switch when one hits its limit. Each is a separate local config (its own sessions); doesn't change your IDE. A specific-session resume stays on its account.",
       acctHint: "Uses Claude Code's own claude auth login — this app never sees or stores your token.",
       language: "Language", buffer: "Resume buffer (seconds after reset)",
       smartDefault: "Smart resume by default", autostart: "Start minimised to tray",
@@ -48,8 +51,11 @@
     tr: {
       settings: "Ayarlar", back: "Geri", account: "Hesap",
       signin: "Giriş yap / hesap değiştir", signout: "Çıkış yap",
-      rotate: "Limit dolunca hesap değiştir · deneysel", addAccount2: "+ Hesap ekle",
-      rotateHint: "KENDİ ayrı hesapların arasında, yeni görevler için. Belirli bir oturum devam ederken kendi hesabında kalır.",
+      switchAcct: "Hesap değiştir (CLI + IDE)", rotationHdr: "Otomatik rotasyon · gelişmiş",
+      switchHint: "Claude'un kendi claude auth'uyla seni başka bir hesaba geçirir — hem CLI hem IDE, her yerde. Bu uygulama token'ını asla görmez/saklamaz. (Her geçişte bir tarayıcı onayı; anında/promptsuz geçiş token saklamayı gerektirir, bu araç onu yapmaz.)",
+      switchOpening: "Claude girişi açılıyor… penceredeki/tarayıcıdaki diğer hesabı seç, sonra geri dön.",
+      rotate: "Limit dolunca hesap değiştir · deneysel", addAccount2: "+ Rotasyon hesabı ekle",
+      rotateHint: "KENDİ ayrı hesapların arasında YENİ görevler için — gece çalışması biri limite düşünce diğerine geçsin. Her biri ayrı yerel config (kendi oturumları); IDE'ni değiştirmez. Belirli bir oturum devam ederken kendi hesabında kalır.",
       acctHint: "Claude Code'un kendi claude auth login'ini kullanır — bu uygulama token'ını asla görmez/saklamaz.",
       language: "Dil", buffer: "Devam tamponu (reset sonrası saniye)",
       smartDefault: "Varsayılan akıllı devam", autostart: "Tepsiye küçültülmüş başlat",
@@ -133,6 +139,7 @@
     getAccount: function () { return Promise.resolve({ loggedIn: true, email: "you@example.com", plan: "pro" }); },
     accountLogin: function () { return Promise.resolve({ ok: true }); },
     accountLogout: function () { return Promise.resolve({ ok: true }); },
+    switchDefaultAccount: function () { return Promise.resolve({ ok: true }); },
     getAccounts: function () { return Promise.resolve({ activeId: "default", rotate: true, accounts: [
       { id: "default", label: "you@work.com", configDir: null },
       { id: "acct-1", label: "you@gmail.com", configDir: "…" }
@@ -396,11 +403,14 @@
     var n = 0, iv = setInterval(function () { n++; refreshAccounts(); if (n >= 20) clearInterval(iv); }, 3000);
   };
 
-  $("acctLogin").onclick = function () {
-    api.accountLogin();
-    $("acctInfo").textContent = "opening Claude sign-in… finish it in the window/browser, then come back";
+  // Token-free global switch: logout+login on the default config → changes the
+  // account for the CLI AND your IDE at once. Claude runs the whole exchange.
+  if ($("acctSwitch")) $("acctSwitch").onclick = function () {
+    var fn = api.switchDefaultAccount || api.accountLogin;
+    fn();
+    $("acctInfo").textContent = t("switchOpening");
     $("acctInfo").style.color = "var(--dim)";
-    var n = 0, iv = setInterval(function () { n++; refreshAccount(); if (n >= 20) clearInterval(iv); }, 3000);
+    var n = 0, iv = setInterval(function () { n++; refreshAccount(); if (n >= 30) clearInterval(iv); }, 3000);
   };
   $("acctLogout").onclick = function () { api.accountLogout().then(refreshAccount); };
   $("toggleList").onclick = function () {

@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld("api", {
   getAccount: () => ipcRenderer.invoke("getAccount"),
   accountLogin: () => ipcRenderer.invoke("accountLogin"),
   accountLogout: () => ipcRenderer.invoke("accountLogout"),
+  switchDefaultAccount: () => ipcRenderer.invoke("switchDefaultAccount"),
 
   // multi-account
   getAccounts: () => ipcRenderer.invoke("getAccounts"),

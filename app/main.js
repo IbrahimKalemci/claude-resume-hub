@@ -613,6 +613,8 @@ ipcMain.handle("getUsage", (_e, opts) => {
 ipcMain.handle("getAccount", () => account.status());
 ipcMain.handle("accountLogin", () => account.login());
 ipcMain.handle("accountLogout", async () => { const r = await account.logout(); return { ok: r.code === 0 }; });
+// Token-free global switch (logout+login on the default config → CLI + IDE).
+ipcMain.handle("switchDefaultAccount", () => account.switchDefault());
 
 // --- multi-account IPC (token-free) -----------------------------------------
 ipcMain.handle("getAccounts", () => accountsPayload());

@@ -3,6 +3,25 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.9.0] — 2026-07-26
+
+### Added
+- **Switch account (CLI + IDE), token-free.** A one-button account switch that
+  changes the account Claude uses *everywhere* — the CLI and your IDE
+  (Antigravity/Cursor/VS Code), which all read the default `~/.claude`. It runs
+  Claude's own `claude auth logout` + `claude auth login` in one console; Claude
+  owns the whole token exchange and **this app still never reads or stores your
+  tokens**. `lib/account.js: switchDefault()`.
+- Reorganized the Account panel: the global switch up top; the existing
+  per-config-dir accounts moved under "Auto-rotation · advanced" (for unattended
+  overnight rotation across your own accounts).
+
+### Notes
+- We deliberately did **not** port a credential-vault switcher (à la ClaudeSwitch)
+  that stores your OAuth tokens for instant, no-prompt switching — that would
+  break this project's core, audited promise never to read or store your tokens.
+  The honest, token-free price is one browser confirm per switch.
+
 ## [1.8.4] — 2026-07-26
 
 ### Changed
