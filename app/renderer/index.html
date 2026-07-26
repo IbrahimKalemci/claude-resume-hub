@@ -214,6 +214,11 @@
         <label for="sAuto" data-i18n="autostart">Start minimised to tray</label>
         <label class="toggle"><input type="checkbox" id="sAuto" /><span class="switch"></span></label>
       </div>
+      <div class="field">
+        <label for="sAutoApprove" data-i18n="autoApprove">Auto-finish if a resume stalls</label>
+        <label class="toggle"><input type="checkbox" id="sAutoApprove" /><span class="switch"></span></label>
+      </div>
+      <div class="hint" data-i18n="autoApproveHint" style="margin:-4px 0 8px">If a resume hangs with no output (usually a tool-permission prompt it can't answer while you're away), auto-approve tools and retry so it actually finishes. On = hands-off.</div>
 
       <div style="border-top:1px solid var(--line);margin:4px 0 10px"></div>
       <h2 style="margin-top:0"><span data-i18n="alerts">Phone / chat alerts</span> <span class="faint" data-i18n="alertsOpt" style="text-transform:none;letter-spacing:0;font-weight:400">— optional, outgoing only</span></h2>

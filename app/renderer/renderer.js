@@ -12,6 +12,7 @@
       acctHint: "Uses Claude Code's own claude auth login — this app never sees or stores your token.",
       language: "Language", buffer: "Resume buffer (seconds after reset)",
       smartDefault: "Smart resume by default", autostart: "Start minimised to tray",
+      autoApprove: "Auto-finish if a resume stalls", autoApproveHint: "If a resume hangs with no output (usually a tool-permission prompt it can't answer while you're away), auto-approve tools and retry so it actually finishes. On = hands-off.",
       alerts: "Phone / chat alerts", alertsOpt: "— optional, outgoing only",
       webhookLbl: "Webhook URL (Discord / Slack / ntfy / any)", sendTest: "Send test",
       project: "PROJECT", change: "Change", noSession: "no session found",
@@ -50,6 +51,7 @@
       acctHint: "Claude Code'un kendi claude auth login'ini kullanır — bu uygulama token'ını asla görmez/saklamaz.",
       language: "Dil", buffer: "Devam tamponu (reset sonrası saniye)",
       smartDefault: "Varsayılan akıllı devam", autostart: "Tepsiye küçültülmüş başlat",
+      autoApprove: "Resume asılırsa otomatik bitir", autoApproveHint: "Resume çıktısız asılırsa (genelde sen yokken cevaplanamayan bir araç-izni istemi), araçları otomatik onaylayıp tekrar dener ki iş gerçekten bitsin. Açık = elini sürme.",
       alerts: "Telefon / sohbet bildirimi", alertsOpt: "— opsiyonel, sadece giden",
       webhookLbl: "Webhook URL (Discord / Slack / ntfy / herhangi)", sendTest: "Test gönder",
       project: "PROJE", change: "Değiştir", noSession: "oturum bulunamadı",
@@ -298,6 +300,7 @@
       $("sBuffer").value = settings.buffer;
       $("sSmart").checked = !!settings.smart;
       $("sAuto").checked = !!settings.autoStart;
+      $("sAutoApprove").checked = settings.autoApproveOnStall !== false; // default on
       $("smart").checked = !!settings.smart;
       var n = settings.notify || (settings.notify = { webhook: "", telegram: { botToken: "", chatId: "" } });
       if (!n.telegram) n.telegram = { botToken: "", chatId: "" };
@@ -605,11 +608,12 @@
       telegram: { botToken: $("nTgToken").value.trim(), chatId: $("nTgChat").value.trim() },
     };
   }
-  ["sBuffer", "sSmart", "sAuto"].forEach(function (id) {
+  ["sBuffer", "sSmart", "sAuto", "sAutoApprove"].forEach(function (id) {
     $(id).addEventListener("change", function () {
       settings.buffer = Number($("sBuffer").value) || 30;
       settings.smart = $("sSmart").checked;
       settings.autoStart = $("sAuto").checked;
+      settings.autoApproveOnStall = $("sAutoApprove").checked;
       $("smart").checked = settings.smart;
       api.saveSettings(settings);
     });

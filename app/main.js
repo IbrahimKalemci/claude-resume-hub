@@ -44,6 +44,11 @@ let settings = {
   // that Claude itself signed into; we never read the credentials). accounts holds
   // EXTRA accounts; the default (~/.claude) account is always implicitly present.
   accounts: [], rotate: false, activeAccountId: "default", defaultLabel: "",
+  // If a resume stalls with no output (headless can't answer a permission
+  // prompt), auto-approve tools and retry so the task actually finishes. This is
+  // what makes "walk away" reliably COMPLETE work instead of hanging. On by
+  // default because the whole point is hands-off; can be turned off.
+  autoApproveOnStall: true,
 };
 
 // ---------------------------------------------------------------------------
@@ -432,32 +437,57 @@ async function runNext() {
   const ctx = { prefix, logLine, jobWaitMs: watchedWaitMs };
   watchedWaitMs = 0;
 
-  // Active-session guard (hard skip). Resuming a session that ANOTHER Claude
-  // client (your IDE — Cursor/Antigravity/VS Code — or another terminal) has open
-  // makes two clients fight over one conversation: it hangs, the watchdog kills
-  // it, and the reset is wasted. A single mtime snapshot misses this, so we take
-  // two samples ~2.5s apart: if the transcript is CHANGING right now, another
-  // client is actively writing it → we refuse to resume (fail fast + clear
-  // message) instead of hanging. A brand-new task session has no such conflict.
+  // Active-session guard — WAIT AND GRAB. Resuming a session another Claude
+  // client (your IDE — Antigravity/Cursor/VS Code — or another terminal) is
+  // actively driving makes two clients fight over one conversation and hang. But
+  // instead of giving up, the app's JOB is to get the continue through — so if the
+  // session is being written right now, we WAIT for that client to go quiet (it
+  // hit its own limit, finished, or you closed it) and then resume. We poll,
+  // detecting "being written" by two mtime samples. Capped so we never wait
+  // forever on a genuinely-in-use session. (A new task session has no conflict.)
   if (job.sessionId && !job.task) {
-    const m1 = sessionMtimeMs(job.dir, job.sessionId);
-    await new Promise((r) => setTimeout(r, 2500));
-    if (stopped) return;
-    const m2 = sessionMtimeMs(job.dir, job.sessionId);
-    if (m1 && m2 && m2 !== m1) {
-      const msg = "That session is being written right now by another Claude client (your IDE / Antigravity / another terminal). Two clients can't share one conversation, so I'm NOT resuming it — it would just hang and waste the reset. Close that Claude window, or pick a session that isn't open elsewhere.";
-      logLine("⛔ " + msg);
-      notify("⛔ Session is open elsewhere", job.label);
-      job.status = "error";
-      send("queue", queue);
-      try { send("stats", stats.recordRun(statsFile(), { project: job.label, outcome: "skipped", waitMs: ctx.jobWaitMs, summary: "" })); } catch { /* ignore */ }
-      pushState({ phase: "error", message: msg, resetAt: null, wakeAt: null });
-      return runNext(); // skip this job; move on
+    const CAP_MS = 30 * 60 * 1000; // give up waiting after 30 min of continuous other-client activity
+    const startedWaiting = Date.now();
+    let announced = false;
+    for (;;) {
+      if (stopped) return;
+      const m1 = sessionMtimeMs(job.dir, job.sessionId);
+      await new Promise((r) => setTimeout(r, 2500));
+      if (stopped) return;
+      const m2 = sessionMtimeMs(job.dir, job.sessionId);
+      if (!(m1 && m2 && m2 !== m1)) break; // quiet → free to resume
+      if (Date.now() - startedWaiting >= CAP_MS) {
+        const msg = "That session has been in active use by another Claude client (your IDE / Antigravity) for 30+ min, so I can't safely take it over. Close that Claude window, or pick a session that isn't open elsewhere.";
+        logLine("⛔ " + msg); notify("⛔ Session busy elsewhere", job.label);
+        job.status = "error"; send("queue", queue);
+        try { send("stats", stats.recordRun(statsFile(), { project: job.label, outcome: "skipped", waitMs: ctx.jobWaitMs, summary: "" })); } catch { /* ignore */ }
+        pushState({ phase: "error", message: msg, resetAt: null, wakeAt: null });
+        return runNext();
+      }
+      if (!announced) {
+        announced = true;
+        logLine("⏳ This session is open in another Claude window right now — waiting for it to go quiet, then I'll resume it here.");
+        notify("⏳ Waiting for your IDE", job.label);
+        pushState({ phase: "waiting", resetAt: null, wakeAt: null, message: "Waiting for another Claude window to release this session…" });
+      }
+      await new Promise((r) => setTimeout(r, 15000)); // re-check every 15s
     }
   }
 
-  const r = await runJob(job, ctx);
+  let r = await runJob(job, ctx);
   if (stopped) return;
+
+  // Stall recovery — the app's job is to get continue DONE, whatever it takes.
+  // A "stuck" (no output for the whole watchdog window) headless is almost always
+  // a permission prompt Claude can't get answered. Auto-approve tools and retry
+  // once so the task actually finishes instead of silently doing nothing.
+  if (r && r.reason === "stuck" && !job.unattended && settings.autoApproveOnStall !== false) {
+    logLine("⟳ It stalled with no output — headless it can't answer a tool-permission prompt. Retrying with auto-approve so it can finish the job.");
+    notify("⟳ Auto-approving so it can finish", job.label);
+    job.unattended = true;
+    r = await runJob(job, ctx);
+    if (stopped) return;
+  }
 
   // Record the finished run (outcome + "what it did" summary) for history — the
   // summary is Claude's last message, read locally from the transcript.

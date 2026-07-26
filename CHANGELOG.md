@@ -3,6 +3,22 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.8.2] — 2026-07-26
+
+### Changed / the app handles the conflict itself
+- **Session busy in your IDE → wait and grab (instead of skip).** When the session
+  you want to resume is being actively driven by another Claude client (Antigravity
+  / Cursor / another terminal), the app no longer just gives up — it's the app's
+  job to get the continue through. It now **waits for that client to go quiet**
+  (it hit its own limit, finished, or you closed it) and then resumes, polling in
+  the background. Capped at 30 min of continuous other-client activity, after which
+  it reports clearly rather than fighting an in-use session. Supersedes 1.8.1's
+  hard skip.
+- **Stall recovery.** If a resume ever stalls with no output for the whole watchdog
+  window, the app auto-approves tools and retries once so the task actually
+  finishes instead of silently doing nothing (`autoApproveOnStall`, on by default,
+  toggle in Settings). A safety net for hands-off runs.
+
 ## [1.8.1] — 2026-07-26
 
 ### Fixed
