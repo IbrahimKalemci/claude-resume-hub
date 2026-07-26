@@ -3,6 +3,16 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.8.4] — 2026-07-26
+
+### Changed
+- **Sessions show their real name, not the first line.** The Start picker (and the
+  in-folder list + active-session display) now use the session's actual title —
+  the `ai-title` Claude Code/IDE assigns, e.g. "Explore Fable model" — instead of a
+  raw, often-useless first message like `<local-command-caveat>…` or "ok". Falls
+  back to the first message, then the id, when a session has no title.
+  `lib/sessions.js: sessionTitle()`.
+
 ## [1.8.3] — 2026-07-26
 
 ### Added

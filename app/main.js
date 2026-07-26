@@ -536,13 +536,13 @@ ipcMain.handle("listSessions", (_e, dir) => {
   const list = listSessions(dir || settings.dir) || [];
   return list.map((s) => ({
     id: s.id, mtime: s.mtime instanceof Date ? s.mtime.toISOString() : String(s.mtime),
-    turns: s.turns, sizeKB: s.sizeKB, preview: s.preview,
+    turns: s.turns, sizeKB: s.sizeKB, title: s.title, preview: s.preview,
   }));
 });
 ipcMain.handle("getRecentSessions", (_e, limit) => {
   const list = require("../lib/sessions").recentSessions(limit || 5) || [];
   return list.map((s) => ({
-    id: s.id, dir: s.dir, project: s.project, turns: s.turns, sizeKB: s.sizeKB,
+    id: s.id, dir: s.dir, project: s.project, turns: s.turns, sizeKB: s.sizeKB, title: s.title,
     mtime: s.mtime instanceof Date ? s.mtime.toISOString() : String(s.mtime), preview: s.preview,
   }));
 });

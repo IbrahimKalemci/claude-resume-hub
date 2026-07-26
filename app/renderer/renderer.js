@@ -18,7 +18,7 @@
       project: "PROJECT", change: "Change", noSession: "no session found",
       runFirst: "Run Claude Code in this folder first.", allSessions: "All sessions",
       pickTitle: "Which session should I continue?", pickSub: "Your most recent sessions across every project (Claude Code, IDE, terminal). Pick one — it resumes from where that conversation left off.",
-      cancel: "Cancel", loadingSessions: "Loading…", noRecent: "No recent sessions found.",
+      cancel: "Cancel", loadingSessions: "Loading…", noRecent: "No recent sessions found.", untitled: "Untitled session",
       status: "STATUS", resumingIn: "RESUMING IN", idle: "Idle — pick a session and press Start.",
       working: "Claude is working…",
       actionQ: "WHAT SHOULD CLAUDE DO WITH THIS SESSION?",
@@ -59,7 +59,7 @@
       project: "PROJE", change: "Değiştir", noSession: "oturum bulunamadı",
       runFirst: "Önce bu klasörde Claude Code çalıştır.", allSessions: "Tüm oturumlar",
       pickTitle: "Hangi oturumu devam ettireyim?", pickSub: "Tüm projelerdeki en son oturumların (Claude Code, IDE, terminal). Birini seç — o konuşmanın kaldığı yerden devam eder.",
-      cancel: "İptal", loadingSessions: "Yükleniyor…", noRecent: "Yakın zamanlı oturum bulunamadı.",
+      cancel: "İptal", loadingSessions: "Yükleniyor…", noRecent: "Yakın zamanlı oturum bulunamadı.", untitled: "İsimsiz oturum",
       status: "DURUM", resumingIn: "DEVAMA KALAN", idle: "Boşta — bir oturum seç ve Başlat'a bas.",
       working: "Claude çalışıyor…",
       actionQ: "BU OTURUMDA CLAUDE NE YAPSIN?",
@@ -114,9 +114,9 @@
         preview: "dashboard'u bir de karanlık temada dene" }
     ]); },
     getRecentSessions: function () { return Promise.resolve([
-      { id: "60c5426f-456e-4086-ad0f-d8d10e0aa80d", dir: "C:\\Users\\you\\Desktop\\kiralabunu", project: "kiralabunu", mtime: new Date(Date.now() - 3e5).toISOString(), turns: 105, sizeKB: 15911, preview: "teklif/pazarlık özelliği ekle" },
-      { id: "384d594d-f53e-4831-bafe-c34bb9307984", dir: "C:\\Users\\you\\Desktop\\devamet", project: "devamet", mtime: new Date(Date.now() - 6e5).toISOString(), turns: 170, sizeKB: 6109, preview: "claude-resume-hub'ı geliştir" },
-      { id: "a1b2c3d4-0000-0000-0000-000000000000", dir: "C:\\Users\\you\\Desktop\\my-api", project: "my-api", mtime: new Date(Date.now() - 9e6).toISOString(), turns: 32, sizeKB: 2200, preview: "add auth middleware" }
+      { id: "60c5426f-456e-4086-ad0f-d8d10e0aa80d", dir: "C:\\Users\\you\\Desktop\\kiralabunu", project: "kiralabunu", mtime: new Date(Date.now() - 3e5).toISOString(), turns: 105, sizeKB: 15911, title: "Explore Fable model", preview: "teklif/pazarlık özelliği ekle" },
+      { id: "384d594d-f53e-4831-bafe-c34bb9307984", dir: "C:\\Users\\you\\Desktop\\devamet", project: "devamet", mtime: new Date(Date.now() - 6e5).toISOString(), turns: 170, sizeKB: 6109, title: "Otomatik devam sistemi", preview: "claude-resume-hub'ı geliştir" },
+      { id: "a1b2c3d4-0000-0000-0000-000000000000", dir: "C:\\Users\\you\\Desktop\\my-api", project: "my-api", mtime: new Date(Date.now() - 9e6).toISOString(), turns: 32, sizeKB: 2200, title: "", preview: "add auth middleware" }
     ]); },
     chooseFolder: function () { return Promise.resolve(null); },
     start: function () { return Promise.resolve({ ok: true }); },
@@ -179,7 +179,7 @@
     sessions.forEach(function (s) {
       var row = el("div", "srow" + (s.id === selectedId ? " sel" : ""));
       var txt = el("div", "txt");
-      txt.appendChild(el("div", "t1 mono ellipsis", short(s.id)));
+      txt.appendChild(el("div", "t1 ellipsis", s.title || s.preview || short(s.id)));
       txt.appendChild(el("div", "t2 ellipsis", fmtWhen(s.mtime) + " · " + s.turns + " prompts"));
       row.appendChild(el("span", "dot"));
       row.appendChild(txt);
@@ -192,10 +192,10 @@
   function renderActive() {
     var s = sessions.filter(function (x) { return x.id === selectedId; })[0] || sessions[0] || null;
     if (s) selectedId = s.id;
-    $("actId").textContent = s ? s.id : t("noSession");
+    $("actId").textContent = s ? (s.title || s.preview || short(s.id)) : t("noSession");
     $("actId").style.color = s ? "" : "var(--faint)";
-    $("actMeta").textContent = s ? (fmtWhen(s.mtime) + " · " + s.turns + " prompts · " + s.sizeKB + " KB") : t("runFirst");
-    $("actPrev").textContent = s && s.preview ? '"' + s.preview + '"' : "";
+    $("actMeta").textContent = s ? (fmtWhen(s.mtime) + " · " + s.turns + " prompts · " + short(s.id)) : t("runFirst");
+    $("actPrev").textContent = s && s.title && s.preview ? '"' + s.preview + '"' : "";
   }
 
   function renderStatus() {
@@ -513,12 +513,11 @@
       list.innerHTML = "";
       if (!rows || !rows.length) { list.appendChild(el("div", "faint", t("noRecent"))); return; }
       rows.forEach(function (s) {
+        var name = s.title || s.preview || t("untitled");
         var row = el("div", "srow");
         var txt = el("div", "txt");
-        txt.appendChild(el("div", "t1 ellipsis proj", s.project));
-        var meta = el("div", "t2 ellipsis", fmtWhen(s.mtime) + " · " + s.turns + " prompts · " + short(s.id));
-        txt.appendChild(meta);
-        if (s.preview) { var p = el("div", "prev ellipsis", '"' + s.preview + '"'); p.style.marginTop = "2px"; txt.appendChild(p); }
+        txt.appendChild(el("div", "t1 ellipsis proj", name));                       // the session's real name (ai-title)
+        txt.appendChild(el("div", "t2 ellipsis", "📁 " + s.project + " · " + fmtWhen(s.mtime) + " · " + s.turns + " prompts"));
         row.appendChild(el("span", "dot"));
         row.appendChild(txt);
         row.onclick = function () {
