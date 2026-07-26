@@ -13,7 +13,7 @@ const path = require("path");
 const fs = require("fs");
 
 const { AutoResumeEngine, probeLimit } = require("../lib/engine");
-const { listSessions, pickActiveSession, lastActiveProjectDir, sessionRecap, smartPrompt, sessionIdleMs, limitFromTranscript } = require("../lib/sessions");
+const { listSessions, pickActiveSession, lastActiveProjectDir, sessionRecap, smartPrompt, sessionIdleMs, sessionMtimeMs, limitFromTranscript } = require("../lib/sessions");
 const { notifyRemote } = require("../lib/notify");
 const { checkUpdate } = require("../lib/update");
 const account = require("../lib/account");
@@ -432,14 +432,28 @@ async function runNext() {
   const ctx = { prefix, logLine, jobWaitMs: watchedWaitMs };
   watchedWaitMs = 0;
 
-  // Active-session guard: if we're resuming a specific session whose transcript
-  // was written seconds ago, it's probably open in another Claude window right
-  // now. Resuming it makes two clients fight over the same conversation and hang
-  // (the exact footgun behind "it did nothing"). Warn loudly; the watchdog is the
-  // backstop if it does hang. (A brand-new task session has no such conflict.)
-  if (job.sessionId && !job.task && sessionIdleMs(job.dir, job.sessionId) < 45000) {
-    logLine("⚠ This session was active seconds ago — it looks open in another Claude window. Resuming it can hang. Close the other window, or pick a different session.");
-    notify("⚠ Session may be open elsewhere", job.label);
+  // Active-session guard (hard skip). Resuming a session that ANOTHER Claude
+  // client (your IDE — Cursor/Antigravity/VS Code — or another terminal) has open
+  // makes two clients fight over one conversation: it hangs, the watchdog kills
+  // it, and the reset is wasted. A single mtime snapshot misses this, so we take
+  // two samples ~2.5s apart: if the transcript is CHANGING right now, another
+  // client is actively writing it → we refuse to resume (fail fast + clear
+  // message) instead of hanging. A brand-new task session has no such conflict.
+  if (job.sessionId && !job.task) {
+    const m1 = sessionMtimeMs(job.dir, job.sessionId);
+    await new Promise((r) => setTimeout(r, 2500));
+    if (stopped) return;
+    const m2 = sessionMtimeMs(job.dir, job.sessionId);
+    if (m1 && m2 && m2 !== m1) {
+      const msg = "That session is being written right now by another Claude client (your IDE / Antigravity / another terminal). Two clients can't share one conversation, so I'm NOT resuming it — it would just hang and waste the reset. Close that Claude window, or pick a session that isn't open elsewhere.";
+      logLine("⛔ " + msg);
+      notify("⛔ Session is open elsewhere", job.label);
+      job.status = "error";
+      send("queue", queue);
+      try { send("stats", stats.recordRun(statsFile(), { project: job.label, outcome: "skipped", waitMs: ctx.jobWaitMs, summary: "" })); } catch { /* ignore */ }
+      pushState({ phase: "error", message: msg, resetAt: null, wakeAt: null });
+      return runNext(); // skip this job; move on
+    }
   }
 
   const r = await runJob(job, ctx);

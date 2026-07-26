@@ -3,6 +3,20 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.8.1] — 2026-07-26
+
+### Fixed
+- **The #1 real-world failure: resuming a session that's open in your IDE.** If a
+  session is held open by another Claude client (Antigravity / Cursor / VS Code /
+  another terminal), two clients fight over one conversation — it hangs, the
+  watchdog kills it, and the reset is wasted (the recurring "I left it overnight
+  and nothing happened"). The active-session guard is now a **hard skip**: it
+  samples the transcript's mtime twice ~2.5s apart, and if the file is being
+  written **right now** by another client, it refuses to resume that session and
+  says so clearly — instead of the old soft warning that still tried and hung.
+  (A truly stopped/closed session is unaffected and resumes normally.)
+  New `sessionMtimeMs()`; the run is logged with a `skipped` outcome.
+
 ## [1.8.0] — 2026-07-26
 
 ### Added

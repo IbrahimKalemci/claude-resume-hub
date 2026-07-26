@@ -523,6 +523,7 @@
   var OUTCOME = {
     done: { icon: "✓", color: "var(--ok)" }, error: { icon: "✕", color: "var(--err)" },
     stuck: { icon: "⚠", color: "var(--warn)" }, auth: { icon: "🔑", color: "var(--err)" },
+    skipped: { icon: "⛔", color: "var(--warn)" },
   };
   function renderStats(s) {
     if (!s) return;
