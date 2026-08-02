@@ -197,26 +197,15 @@
       <h2 style="margin-top:0" data-i18n="account">Account</h2>
       <div class="row" style="margin-bottom:8px"><span id="acctInfo" style="font-size:12.5px;color:var(--dim)">checking…</span></div>
 
-      <!-- Global switch: changes the default account for CLI + IDE, token-free -->
-      <div class="row" style="gap:8px;margin-bottom:6px">
-        <button class="btn primary" id="acctSwitch" data-i18n="switchAcct">Switch account (CLI + IDE)</button>
+      <!-- Saved accounts (encrypted token vault): click a row to switch instantly -->
+      <div class="slist" id="vaultList" style="margin-bottom:8px"></div>
+      <div class="row" style="gap:8px;margin-bottom:6px;flex-wrap:wrap">
+        <button class="btn primary" id="vaultAdd" data-i18n="vaultAdd">+ Add account</button>
+        <button class="btn" id="vaultSaveCur" data-i18n="vaultSave">Save current</button>
         <button class="btn" id="acctLogout" data-i18n="signout">Sign out</button>
       </div>
-      <div class="hint" data-i18n="switchHint" style="margin-bottom:10px">Signs you into another account for Claude everywhere — the CLI and your IDE — via Claude's own <code>claude auth</code>. This app never sees or stores your tokens. (One browser confirm per switch; instant no-prompt switching would require storing tokens, which this tool won't do.)</div>
-
-      <div style="border-top:1px solid var(--line);margin:10px 0"></div>
-      <div class="row" style="justify-content:space-between;margin-bottom:4px">
-        <span class="faint" data-i18n="rotationHdr" style="font-size:10.5px;text-transform:uppercase;letter-spacing:1px;font-weight:700">Auto-rotation · advanced</span>
-      </div>
-      <!-- multi-account list (separate local configs): click to switch the APP's account; ✕ to remove -->
-      <div class="slist" id="acctList" style="margin-bottom:8px"></div>
-      <div class="field" style="margin-bottom:6px">
-        <label for="rotateAcct" data-i18n="rotate">Rotate accounts when limited · experimental</label>
-        <label class="toggle"><input type="checkbox" id="rotateAcct" /><span class="switch"></span></label>
-      </div>
-      <div class="hint" data-i18n="rotateHint" style="margin:-2px 0 8px">For NEW tasks across your own separate accounts, so an overnight run can switch when one hits its limit. Each is a separate local config (its own sessions); doesn't change your IDE. A specific-session resume stays on its account.</div>
-      <button class="btn" id="acctAdd" data-i18n="addAccount2" style="margin-bottom:2px">+ Add rotation account</button>
-      <div class="hint" data-i18n="acctHint">Uses Claude Code's own claude auth login — this app never sees or stores your token.</div>
+      <div class="hint" data-i18n="vaultHint" style="margin-bottom:10px">Click a saved account to switch instantly — no re-login — for the CLI and your IDE at once. Tokens are stored encrypted on this PC only (Windows DPAPI, your login). <b>Add account</b> signs you into another one; <b>Save current</b> adds the one you're on now.</div>
+      <div class="hint" id="vaultUnavail" data-i18n="vaultUnavail" style="display:none;color:var(--warn)">The encrypted vault is Windows-only. On this OS use Sign out + sign in to change accounts.</div>
       <div style="border-top:1px solid var(--line);margin:12px 0"></div>
 
       <div class="field">
@@ -357,12 +346,12 @@
   </main>
 
   <footer>
-    <span class="shield" title="This app never reads or stores your Claude credentials. It only reads your own conversation transcripts, locally.">
+    <span class="shield" title="Everything runs on your machine. The auto-resume engine reads only your transcripts. The optional account switcher stores your tokens encrypted locally (Windows DPAPI, your login) — nothing ever leaves your PC.">
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
         <path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/>
         <path d="M9 12l2 2 4-4"/>
       </svg>
-      <span data-i18n="shield">Zero tokens · runs locally</span>
+      <span data-i18n="shield">Local · encrypted</span>
     </span>
   </footer>
 </div>

@@ -3,6 +3,31 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.0.0] — 2026-07-26
+
+### Added
+- **Instant account switch (encrypted token vault).** Save your Claude accounts
+  and flip between them in **one click, no re-login** — for the CLI *and* your IDE
+  (Antigravity/Cursor/VS Code) at once, since they share `~/.claude`. Modeled on
+  ClaudeSwitch. "Add account" signs into another one and auto-saves it; "Save
+  current" adds the one you're on. `lib/vault.js`.
+
+### Changed — ⚠️ security posture (breaking the previous promise, on purpose)
+- To make switching **instant**, the account switcher now **stores your Claude
+  OAuth tokens** — snapshotting `~/.claude/.credentials.json` + the identity in
+  `~/.claude.json`, and writing them back on switch. Tokens are **encrypted at
+  rest with Windows DPAPI** (current-user scope: only your Windows login, only on
+  that machine); nothing leaves your PC. The live files are backed up (`.crh-bak`)
+  and written atomically before the first switch.
+- Because of this, the earlier blanket claim that the app *never reads or stores
+  your tokens* is **no longer true**, and has been removed from the README, the
+  in-app shield ("Zero tokens" → "Local · encrypted"), and the tagline. The
+  **auto-resume engine itself still only reads transcripts** — the token storage
+  is confined to the opt-in account switcher. Don't use it and no tokens are
+  touched.
+- Windows-only for now (DPAPI). On macOS/Linux the switcher falls back to sign
+  out + sign in.
+
 ## [1.9.0] — 2026-07-26
 
 ### Added

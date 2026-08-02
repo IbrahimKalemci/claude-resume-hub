@@ -6,7 +6,7 @@
 
 ### Hit a Claude Code limit at 2am? **Wake up to finished work.**
 
-Auto-continues your Claude Code session the moment a usage/session limit resets — as a **tray desktop app** or a one-line **CLI**. Cross-platform, zero-dependency, and it **never touches your tokens**.
+Auto-continues your Claude Code session the moment a usage/session limit resets — as a **tray desktop app** or a one-line **CLI**. Cross-platform, zero-dependency, **fully local** — nothing ever leaves your machine.
 
 <p>
   <a href="https://www.npmjs.com/package/claude-resume-hub"><img src="https://img.shields.io/npm/v/claude-resume-hub?color=c96442&label=npm" alt="npm"></a>
@@ -59,15 +59,16 @@ Handy flags: `--list` (see your sessions) · `--session <id>` (resume a specific
 - 🌙 **"Walk away" preset** — one click arms the full set-and-forget flow (continue + smart + watch + unattended)
 - 📊 **Local usage** — tokens used this session / last 24h, counted from your transcripts (consumption, not plan quota — it can't see that)
 - 🎯 **Finds the right session** and pins it (no more resuming the wrong one)
+- 🔀 **Instant account switch** — save your accounts and flip between them in one click, for the CLI *and* your IDE
 - 📚 **Multi-project queue** — several projects resume in order on one reset clock
 - 🔔 **Phone/chat alerts** — optional webhook or Telegram ping on reset / done / error
 - 📺 **Live output** — watch what Claude did, even while you were away
 - ⬆️ **Update banner** — tells you when a newer version ships
-- 🪶 **Zero dependencies**, ~one small package · 🔒 **never reads your tokens**
+- 🪶 **Zero dependencies**, ~one small package · 🔒 **fully local**
 
 ### 🔒 Security & privacy
 
-It **never** reads or stores your Claude credentials (`~/.claude/.credentials.json` / keychain). It only reads your own conversation transcripts under `~/.claude/projects`, locally. No telemetry; the dashboard is localhost-only; release binaries are built by CI from source on clean machines, so a downloaded `.exe` carries no one's data.
+Everything runs on your machine — no telemetry, the dashboard is localhost-only, and release binaries are built by CI from source on clean machines. The **auto-resume engine** reads only your conversation transcripts under `~/.claude/projects`; it never reads your credentials. The optional **account switcher** (added in v2.0) does store your Claude tokens so it can switch accounts instantly without re-login — encrypted at rest with Windows **DPAPI** (current-user scope: only your Windows login, only on that PC). Nothing ever leaves your machine. If you'd rather it never touch tokens at all, simply don't use the account switcher.
 
 ---
 
@@ -106,15 +107,16 @@ npx claude-resume-hub            # ...ya da panelsiz
 - 🌙 **"Çık git" preset'i** — tek tıkla tam kur-unut akışı (devam + akıllı + nöbet + gözetimsiz)
 - 📊 **Yerel kullanım** — bu oturum / son 24s token'ı, transcript'lerinden sayılır (tüketim; plan kotan değil — onu göremez)
 - 🎯 **Doğru oturumu bulur** ve sabitler (yanlış oturumu devam ettirme derdi yok)
+- 🔀 **Anında hesap değiştirme** — hesaplarını kaydet, tek tıkla aralarında geç; hem CLI hem IDE için
 - 📚 **Çoklu proje kuyruğu** — birden fazla proje tek reset saatinde sırayla devam eder
 - 🔔 **Telefon/sohbet bildirimi** — webhook ya da Telegram ile reset/bitiş/hata bildirimi
 - 📺 **Canlı çıktı** — Claude ne yaptı, sen yokken bile gör
 - ⬆️ **Güncelleme banner'ı** — yeni sürüm çıkınca söyler
-- 🪶 **Sıfır bağımlılık** · 🔒 **token'ına asla dokunmaz**
+- 🪶 **Sıfır bağımlılık** · 🔒 **tamamen yerel**
 
 ### 🔒 Güvenlik & gizlilik
 
-Claude kimlik bilgilerini (`~/.claude/.credentials.json` / keychain) **asla** okumaz/saklamaz. Sadece kendi makinendeki `~/.claude/projects` konuşma metinlerini okur. Telemetri yok; panel yalnızca localhost; release binary'leri CI'da temiz sunucularda kaynaktan derlenir — indirilen `.exe` kimsenin verisini taşımaz.
+Her şey senin makinende çalışır — telemetri yok, panel yalnızca localhost, release binary'leri CI'da temiz sunucularda kaynaktan derlenir. **Otomatik-devam motoru** yalnızca `~/.claude/projects` konuşma metinlerini okur; kimlik bilgilerini okumaz. Opsiyonel **hesap değiştirici** (v2.0'da eklendi) ise anında (tekrar giriş yapmadan) geçiş için Claude token'larını **saklar** — Windows **DPAPI** ile şifreli (current-user: yalnızca senin Windows girişin, yalnızca o PC). Hiçbir şey makineni terk etmez. Token'a hiç dokunulmasını istemiyorsan hesap değiştiriciyi kullanma, yeter.
 
 ---
 

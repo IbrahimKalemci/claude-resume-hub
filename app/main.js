@@ -17,6 +17,7 @@ const { listSessions, pickActiveSession, lastActiveProjectDir, sessionRecap, sma
 const { notifyRemote } = require("../lib/notify");
 const { checkUpdate } = require("../lib/update");
 const account = require("../lib/account");
+const vault = require("../lib/vault");
 const stats = require("../lib/stats");
 const usage = require("../lib/usage");
 const { appIcon } = require("./icon");
@@ -615,6 +616,16 @@ ipcMain.handle("accountLogin", () => account.login());
 ipcMain.handle("accountLogout", async () => { const r = await account.logout(); return { ok: r.code === 0 }; });
 // Token-free global switch (logout+login on the default config → CLI + IDE).
 ipcMain.handle("switchDefaultAccount", () => account.switchDefault());
+
+// --- account vault (ClaudeSwitch-style instant switch; stores tokens) --------
+function vaultDir() { return path.join(app.getPath("userData"), "vault"); }
+ipcMain.handle("vaultAvailable", () => vault.available());
+ipcMain.handle("vaultList", () => vault.list(vaultDir()));
+ipcMain.handle("vaultSaveCurrent", () => { const r = vault.saveCurrent(vaultDir()); return { r, list: vault.list(vaultDir()) }; });
+ipcMain.handle("vaultSwitch", (_e, id) => { const r = vault.switchTo(vaultDir(), id); return { r, list: vault.list(vaultDir()) }; });
+ipcMain.handle("vaultRemove", (_e, id) => { vault.remove(vaultDir(), id); return { list: vault.list(vaultDir()) }; });
+// Add account = sign into a new/other account, then it can be saved to the vault.
+ipcMain.handle("vaultAddLogin", () => account.login());
 
 // --- multi-account IPC (token-free) -----------------------------------------
 ipcMain.handle("getAccounts", () => accountsPayload());

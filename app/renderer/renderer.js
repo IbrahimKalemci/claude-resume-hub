@@ -7,9 +7,10 @@
     en: {
       settings: "Settings", back: "Back", account: "Account",
       signin: "Sign in / switch account", signout: "Sign out",
-      switchAcct: "Switch account (CLI + IDE)", rotationHdr: "Auto-rotation · advanced",
-      switchHint: "Signs you into another account for Claude everywhere — the CLI and your IDE — via Claude's own claude auth. This app never sees or stores your tokens. (One browser confirm per switch; instant no-prompt switching would require storing tokens, which this tool won't do.)",
-      switchOpening: "Opening Claude sign-in… pick the other account in the window/browser, then come back.",
+      vaultAdd: "+ Add account", vaultSave: "Save current",
+      vaultHint: "Click a saved account to switch instantly — no re-login — for the CLI and your IDE at once. Tokens are stored encrypted on this PC only (Windows DPAPI, your login). Add account signs you into another one; Save current adds the one you're on now.",
+      vaultUnavail: "The encrypted vault is Windows-only. On this OS use Sign out + sign in to change accounts.",
+      vaultSwitching: "Switching account…", vaultAdding: "Opening Claude sign-in for the new account… finish it, I'll save it automatically.",
       rotate: "Rotate accounts when limited · experimental", addAccount2: "+ Add rotation account",
       rotateHint: "For NEW tasks across your own separate accounts, so an overnight run can switch when one hits its limit. Each is a separate local config (its own sessions); doesn't change your IDE. A specific-session resume stays on its account.",
       acctHint: "Uses Claude Code's own claude auth login — this app never sees or stores your token.",
@@ -46,14 +47,15 @@
       statResumes: "auto-resumes", statSaved: "of waiting saved for you", history: "History",
       usageLbl: "Tokens used", usageSession: "this session", usage24h: "last 24h",
       usageHint: "Local counts from your transcripts — not your plan quota (this app can't see that).",
-      shield: "Zero tokens · runs locally",
+      shield: "Local · encrypted",
     },
     tr: {
       settings: "Ayarlar", back: "Geri", account: "Hesap",
       signin: "Giriş yap / hesap değiştir", signout: "Çıkış yap",
-      switchAcct: "Hesap değiştir (CLI + IDE)", rotationHdr: "Otomatik rotasyon · gelişmiş",
-      switchHint: "Claude'un kendi claude auth'uyla seni başka bir hesaba geçirir — hem CLI hem IDE, her yerde. Bu uygulama token'ını asla görmez/saklamaz. (Her geçişte bir tarayıcı onayı; anında/promptsuz geçiş token saklamayı gerektirir, bu araç onu yapmaz.)",
-      switchOpening: "Claude girişi açılıyor… penceredeki/tarayıcıdaki diğer hesabı seç, sonra geri dön.",
+      vaultAdd: "+ Hesap ekle", vaultSave: "Mevcudu kaydet",
+      vaultHint: "Kayıtlı bir hesaba tıkla → anında geçiş, tekrar giriş yok — hem CLI hem IDE aynı anda. Token'lar sadece bu PC'de şifreli saklanır (Windows DPAPI, senin girişin). Hesap ekle seni başka bir hesaba sokar; Mevcudu kaydet şu ankini ekler.",
+      vaultUnavail: "Şifreli vault yalnızca Windows'ta. Bu OS'ta hesap değiştirmek için Çıkış yap + giriş yap.",
+      vaultSwitching: "Hesap değiştiriliyor…", vaultAdding: "Yeni hesap için Claude girişi açılıyor… bitir, otomatik kaydedeceğim.",
       rotate: "Limit dolunca hesap değiştir · deneysel", addAccount2: "+ Rotasyon hesabı ekle",
       rotateHint: "KENDİ ayrı hesapların arasında YENİ görevler için — gece çalışması biri limite düşünce diğerine geçsin. Her biri ayrı yerel config (kendi oturumları); IDE'ni değiştirmez. Belirli bir oturum devam ederken kendi hesabında kalır.",
       acctHint: "Claude Code'un kendi claude auth login'ini kullanır — bu uygulama token'ını asla görmez/saklamaz.",
@@ -90,7 +92,7 @@
       statResumes: "otomatik devam", statSaved: "bekleme kazandırıldı", history: "Geçmiş",
       usageLbl: "Kullanılan token", usageSession: "bu oturum", usage24h: "son 24s",
       usageHint: "Transcript'lerinden yerel sayımlar — plan kotan değil (uygulama onu göremez).",
-      shield: "Token yok · yerelde çalışır",
+      shield: "Yerel · şifreli",
     },
   };
   var lang = "en";
@@ -140,15 +142,15 @@
     accountLogin: function () { return Promise.resolve({ ok: true }); },
     accountLogout: function () { return Promise.resolve({ ok: true }); },
     switchDefaultAccount: function () { return Promise.resolve({ ok: true }); },
-    getAccounts: function () { return Promise.resolve({ activeId: "default", rotate: true, accounts: [
-      { id: "default", label: "you@work.com", configDir: null },
-      { id: "acct-1", label: "you@gmail.com", configDir: "…" }
-    ] }); },
-    refreshAccounts: function () { return this.getAccounts(); },
-    setRotate: function () { return this.getAccounts(); },
-    switchAccount: function () { return this.getAccounts(); },
-    addAccount: function () { return Promise.resolve({ ok: true, id: "acct-2" }); },
-    removeAccount: function () { return this.getAccounts(); },
+    vaultAvailable: function () { return Promise.resolve(true); },
+    vaultList: function () { return Promise.resolve([
+      { id: "you_work_com", email: "you@work.com", plan: "team", org: "ROCR", active: true },
+      { id: "you_gmail_com", email: "you@gmail.com", plan: "pro", org: "Personal", active: false }
+    ]); },
+    vaultSaveCurrent: function () { return this.vaultList().then(function (l) { return { r: { ok: true }, list: l }; }); },
+    vaultSwitch: function () { return this.vaultList().then(function (l) { return { r: { ok: true }, list: l }; }); },
+    vaultRemove: function () { return this.vaultList().then(function (l) { return { list: l }; }); },
+    vaultAddLogin: function () { return Promise.resolve({ ok: true }); },
     onState: function () {}, onLog: function () {}
   };
 
@@ -359,58 +361,66 @@
       info.style.color = "var(--err)";
     }
   }
-  function refreshAccount() { if (api.getAccount) api.getAccount().then(renderAccount); refreshAccounts(); }
+  function refreshAccount() { if (api.getAccount) api.getAccount().then(renderAccount); refreshVault(); }
 
-  // ---- multi-account list ----
-  function renderAccounts(p) {
-    if (!p) return;
-    $("rotateAcct").checked = !!p.rotate;
-    var list = $("acctList");
-    if (!list) return;
-    list.innerHTML = "";
-    (p.accounts || []).forEach(function (a) {
-      var active = a.id === p.activeId;
-      var row = el("div", "srow" + (active ? " sel" : ""));
+  // ---- account vault (ClaudeSwitch-style instant switch) ----
+  function renderVault(list) {
+    var box = $("vaultList"); if (!box) return;
+    box.innerHTML = "";
+    (list || []).forEach(function (a) {
+      var row = el("div", "srow" + (a.active ? " sel" : ""));
       row.style.cursor = "pointer";
-      var dot = el("span", "dot"); dot.style.background = active ? "var(--ok)" : "var(--faint)";
+      var dot = el("span", "dot"); dot.style.background = a.active ? "var(--ok)" : "var(--faint)";
       var txt = el("div", "txt");
-      // a.label is an account email/label — untrusted → textContent only.
-      txt.appendChild(el("div", "t1 ellipsis", (active ? "● " : "") + (a.label || a.id)));
+      txt.appendChild(el("div", "t1 ellipsis", (a.active ? "● " : "") + (a.email || a.id)));
+      txt.appendChild(el("div", "t2 ellipsis", (a.plan || "") + (a.org ? " · " + a.org : "")));
       row.appendChild(dot); row.appendChild(txt);
-      row.onclick = function () { if (!isBusy() && api.switchAccount) api.switchAccount(a.id).then(renderAccounts); };
-      if (a.id !== "default" && !isBusy()) {
-        var x = el("button", "linklike", "✕"); x.style.color = "var(--faint)";
-        x.onclick = function (e) { e.stopPropagation(); if (api.removeAccount) api.removeAccount(a.id).then(renderAccounts); };
-        row.appendChild(x);
-      }
-      list.appendChild(row);
+      row.onclick = function () {
+        if (a.active || isBusy() || !api.vaultSwitch) return;
+        $("acctInfo").textContent = t("vaultSwitching"); $("acctInfo").style.color = "var(--dim)";
+        api.vaultSwitch(a.id).then(function (res) {
+          renderVault(res && res.list); refreshAccount();
+          if (res && res.r && res.r.ok === false) addLog({ line: "Switch failed: " + res.r.error });
+        });
+      };
+      var x = el("button", "linklike", "✕"); x.style.color = "var(--faint)";
+      x.onclick = function (e) { e.stopPropagation(); if (api.vaultRemove) api.vaultRemove(a.id).then(function (res) { renderVault(res && res.list); }); };
+      row.appendChild(x);
+      box.appendChild(row);
     });
   }
-  function refreshAccounts() {
-    if (!api.getAccounts) return;
-    api.getAccounts().then(renderAccounts);
-    if (api.refreshAccounts) api.refreshAccounts().then(renderAccounts); // fill emails/labels
+  function refreshVault() {
+    if (!api.vaultAvailable) return;
+    api.vaultAvailable().then(function (av) {
+      if (!av) { if ($("vaultUnavail")) $("vaultUnavail").style.display = "block"; return; }
+      if (api.vaultList) api.vaultList().then(renderVault);
+    });
   }
-  if (api.onAccounts) api.onAccounts(renderAccounts);
-  if ($("rotateAcct")) $("rotateAcct").addEventListener("change", function () {
-    if (api.setRotate) api.setRotate($("rotateAcct").checked).then(renderAccounts);
-  });
-  if ($("acctAdd")) $("acctAdd").onclick = function () {
-    if (!api.addAccount) return;
-    api.addAccount("Account " + new Date().toLocaleTimeString());
-    $("acctInfo").textContent = "opening Claude sign-in for the new account… finish it, then come back";
-    $("acctInfo").style.color = "var(--dim)";
-    var n = 0, iv = setInterval(function () { n++; refreshAccounts(); if (n >= 20) clearInterval(iv); }, 3000);
+  if ($("vaultSaveCur")) $("vaultSaveCur").onclick = function () {
+    if (!api.vaultSaveCurrent) return;
+    api.vaultSaveCurrent().then(function (res) {
+      renderVault(res && res.list);
+      if (res && res.r && res.r.ok === false) { $("acctInfo").textContent = res.r.error; $("acctInfo").style.color = "var(--warn)"; }
+    });
   };
-
-  // Token-free global switch: logout+login on the default config → changes the
-  // account for the CLI AND your IDE at once. Claude runs the whole exchange.
-  if ($("acctSwitch")) $("acctSwitch").onclick = function () {
-    var fn = api.switchDefaultAccount || api.accountLogin;
-    fn();
-    $("acctInfo").textContent = t("switchOpening");
-    $("acctInfo").style.color = "var(--dim)";
-    var n = 0, iv = setInterval(function () { n++; refreshAccount(); if (n >= 30) clearInterval(iv); }, 3000);
+  if ($("vaultAdd")) $("vaultAdd").onclick = function () {
+    if (!api.vaultAddLogin) return;
+    api.vaultAddLogin();
+    $("acctInfo").textContent = t("vaultAdding"); $("acctInfo").style.color = "var(--dim)";
+    // When a DIFFERENT account becomes live (login finished), auto-save it to the vault.
+    api.getAccount().then(function (a0) {
+      var startEmail = a0 && a0.email;
+      var n = 0, iv = setInterval(function () {
+        n++;
+        api.getAccount().then(function (a) {
+          if (a && a.loggedIn && a.email && a.email !== startEmail) {
+            if (api.vaultSaveCurrent) api.vaultSaveCurrent().then(function (res) { renderVault(res && res.list); });
+            renderAccount(a); clearInterval(iv);
+          }
+        });
+        if (n >= 40) clearInterval(iv);
+      }, 3000);
+    });
   };
   $("acctLogout").onclick = function () { api.accountLogout().then(refreshAccount); };
   $("toggleList").onclick = function () {

@@ -26,6 +26,12 @@ contextBridge.exposeInMainWorld("api", {
   accountLogin: () => ipcRenderer.invoke("accountLogin"),
   accountLogout: () => ipcRenderer.invoke("accountLogout"),
   switchDefaultAccount: () => ipcRenderer.invoke("switchDefaultAccount"),
+  vaultAvailable: () => ipcRenderer.invoke("vaultAvailable"),
+  vaultList: () => ipcRenderer.invoke("vaultList"),
+  vaultSaveCurrent: () => ipcRenderer.invoke("vaultSaveCurrent"),
+  vaultSwitch: (id) => ipcRenderer.invoke("vaultSwitch", id),
+  vaultRemove: (id) => ipcRenderer.invoke("vaultRemove", id),
+  vaultAddLogin: () => ipcRenderer.invoke("vaultAddLogin"),
 
   // multi-account
   getAccounts: () => ipcRenderer.invoke("getAccounts"),
