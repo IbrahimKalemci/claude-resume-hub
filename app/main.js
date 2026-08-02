@@ -18,6 +18,7 @@ const { notifyRemote } = require("../lib/notify");
 const { checkUpdate } = require("../lib/update");
 const account = require("../lib/account");
 const vault = require("../lib/vault");
+const usageapi = require("../lib/usageapi");
 const stats = require("../lib/stats");
 const usage = require("../lib/usage");
 const { appIcon } = require("./icon");
@@ -626,6 +627,23 @@ ipcMain.handle("vaultSwitch", (_e, id) => { const r = vault.switchTo(vaultDir(),
 ipcMain.handle("vaultRemove", (_e, id) => { vault.remove(vaultDir(), id); return { list: vault.list(vaultDir()) }; });
 // Add account = sign into a new/other account, then it can be saved to the vault.
 ipcMain.handle("vaultAddLogin", () => account.login());
+// Live plan-usage per saved account (5h / 7d %), from Claude's own usage endpoint.
+// Cached ~5 min to respect rate limits (same idea as ClaudeSwitch's 10-min refresh).
+let _usageCache = {};
+ipcMain.handle("vaultUsage", async () => {
+  const accounts = vault.list(vaultDir());
+  const live = vault.readLive();
+  const out = {};
+  for (const a of accounts) {
+    const c = _usageCache[a.id];
+    if (c && Date.now() - c.at < 5 * 60 * 1000) { out[a.id] = c.data; continue; }
+    const token = (a.active && live) ? live.snapshot.claudeAiOauth.accessToken : vault.tokenFor(vaultDir(), a.id);
+    const u = await usageapi.getUsage(token, 10000);
+    out[a.id] = u;
+    if (u && u.ok) _usageCache[a.id] = { data: u, at: Date.now() };
+  }
+  return out;
+});
 
 // --- multi-account IPC (token-free) -----------------------------------------
 ipcMain.handle("getAccounts", () => accountsPayload());

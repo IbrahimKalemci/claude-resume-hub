@@ -3,6 +3,18 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.1.0] — 2026-07-26
+
+### Added
+- **Live per-account usage on the account cards** (ClaudeSwitch-style). Each saved
+  account now shows its **5-hour** and **7-day** utilization as a coloured bar +
+  percentage + reset time, read from Claude's own usage endpoint
+  (`api.anthropic.com/api/oauth/usage` — the same one `/usage` uses) with that
+  account's token. A **"most free"** badge marks the account with the most 5-hour
+  headroom, so you can see at a glance which one to switch to. Cached ~5 min to
+  respect the endpoint. `lib/usageapi.js`. (Inactive accounts whose stored token
+  has expired show "switch to refresh".)
+
 ## [2.0.0] — 2026-07-26
 
 ### Added

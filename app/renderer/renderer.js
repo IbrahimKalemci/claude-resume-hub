@@ -11,6 +11,7 @@
       vaultHint: "Click a saved account to switch instantly — no re-login — for the CLI and your IDE at once. Tokens are stored encrypted on this PC only (Windows DPAPI, your login). Add account signs you into another one; Save current adds the one you're on now.",
       vaultUnavail: "The encrypted vault is Windows-only. On this OS use Sign out + sign in to change accounts.",
       vaultSwitching: "Switching account…", vaultAdding: "Opening Claude sign-in for the new account… finish it, I'll save it automatically.",
+      mostFree: "most free", tokenExpired: "switch to refresh",
       rotate: "Rotate accounts when limited · experimental", addAccount2: "+ Add rotation account",
       rotateHint: "For NEW tasks across your own separate accounts, so an overnight run can switch when one hits its limit. Each is a separate local config (its own sessions); doesn't change your IDE. A specific-session resume stays on its account.",
       acctHint: "Uses Claude Code's own claude auth login — this app never sees or stores your token.",
@@ -56,6 +57,7 @@
       vaultHint: "Kayıtlı bir hesaba tıkla → anında geçiş, tekrar giriş yok — hem CLI hem IDE aynı anda. Token'lar sadece bu PC'de şifreli saklanır (Windows DPAPI, senin girişin). Hesap ekle seni başka bir hesaba sokar; Mevcudu kaydet şu ankini ekler.",
       vaultUnavail: "Şifreli vault yalnızca Windows'ta. Bu OS'ta hesap değiştirmek için Çıkış yap + giriş yap.",
       vaultSwitching: "Hesap değiştiriliyor…", vaultAdding: "Yeni hesap için Claude girişi açılıyor… bitir, otomatik kaydedeceğim.",
+      mostFree: "en boş", tokenExpired: "yenilemek için geç",
       rotate: "Limit dolunca hesap değiştir · deneysel", addAccount2: "+ Rotasyon hesabı ekle",
       rotateHint: "KENDİ ayrı hesapların arasında YENİ görevler için — gece çalışması biri limite düşünce diğerine geçsin. Her biri ayrı yerel config (kendi oturumları); IDE'ni değiştirmez. Belirli bir oturum devam ederken kendi hesabında kalır.",
       acctHint: "Claude Code'un kendi claude auth login'ini kullanır — bu uygulama token'ını asla görmez/saklamaz.",
@@ -151,6 +153,10 @@
     vaultSwitch: function () { return this.vaultList().then(function (l) { return { r: { ok: true }, list: l }; }); },
     vaultRemove: function () { return this.vaultList().then(function (l) { return { list: l }; }); },
     vaultAddLogin: function () { return Promise.resolve({ ok: true }); },
+    vaultUsage: function () { return Promise.resolve({
+      you_work_com: { ok: true, fiveHour: { pct: 100, resetsAt: new Date(Date.now() + 2 * 3600e3).toISOString() }, sevenDay: { pct: 42, resetsAt: new Date(Date.now() + 3 * 864e5).toISOString() } },
+      you_gmail_com: { ok: true, fiveHour: { pct: 12, resetsAt: new Date(Date.now() + 1 * 3600e3).toISOString() }, sevenDay: { pct: 5, resetsAt: null } }
+    }); },
     onState: function () {}, onLog: function () {}
   };
 
@@ -363,37 +369,63 @@
   }
   function refreshAccount() { if (api.getAccount) api.getAccount().then(renderAccount); refreshVault(); }
 
-  // ---- account vault (ClaudeSwitch-style instant switch) ----
+  // ---- account vault (ClaudeSwitch-style instant switch + live usage) ----
+  var _vaultUsage = {}; // id -> usage {ok, fiveHour:{pct,resetsAt}, sevenDay:{...}}
+  function hm(iso) { try { return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); } catch (e) { return ""; } }
+  function usageLine(label, seg) {
+    var line = el("div", "uline");
+    line.appendChild(el("span", "ulab", label));
+    var pct = seg && seg.pct != null ? seg.pct : null;
+    var bar = el("div", "ubar"); var fill = el("div", "ufill");
+    fill.style.width = (pct != null ? pct : 0) + "%";
+    fill.style.background = pct == null ? "var(--faint)" : (pct >= 90 ? "var(--err)" : pct >= 50 ? "var(--warn)" : "var(--ok)");
+    bar.appendChild(fill); line.appendChild(bar);
+    line.appendChild(el("span", "upct", pct != null ? pct + "%" : "—"));
+    if (seg && seg.resetsAt) line.appendChild(el("span", "ureset", "· " + hm(seg.resetsAt)));
+    return line;
+  }
   function renderVault(list) {
     var box = $("vaultList"); if (!box) return;
     box.innerHTML = "";
-    (list || []).forEach(function (a) {
-      var row = el("div", "srow" + (a.active ? " sel" : ""));
-      row.style.cursor = "pointer";
-      var dot = el("span", "dot"); dot.style.background = a.active ? "var(--ok)" : "var(--faint)";
+    list = list || [];
+    // "most free" = the account with the lowest 5-hour utilization (that we know)
+    var freeId = null, freePct = 101;
+    list.forEach(function (a) { var u = _vaultUsage[a.id]; if (u && u.ok && u.fiveHour && u.fiveHour.pct < freePct) { freePct = u.fiveHour.pct; freeId = a.id; } });
+    list.forEach(function (a) {
+      var u = _vaultUsage[a.id];
+      var row = el("div", "srow" + (a.active ? " sel" : "")); row.style.cursor = "pointer"; row.style.alignItems = "flex-start";
+      var dot = el("span", "dot"); dot.style.background = a.active ? "var(--ok)" : "var(--faint)"; dot.style.marginTop = "4px";
       var txt = el("div", "txt");
-      txt.appendChild(el("div", "t1 ellipsis", (a.active ? "● " : "") + (a.email || a.id)));
-      txt.appendChild(el("div", "t2 ellipsis", (a.plan || "") + (a.org ? " · " + a.org : "")));
+      var head = el("div", "t1 ellipsis", (a.active ? "● " : "") + (a.email || a.id));
+      if (a.id === freeId && list.length > 1) { var b = el("span", "freebadge", t("mostFree")); head.appendChild(b); }
+      txt.appendChild(head);
+      txt.appendChild(el("div", "t2 ellipsis", (a.plan || "") + (a.org ? " · " + a.org : "") + (u && u.expired ? " · " + t("tokenExpired") : "")));
+      txt.appendChild(usageLine("5h", u && u.ok ? u.fiveHour : null));
+      txt.appendChild(usageLine("7d", u && u.ok ? u.sevenDay : null));
       row.appendChild(dot); row.appendChild(txt);
       row.onclick = function () {
         if (a.active || isBusy() || !api.vaultSwitch) return;
         $("acctInfo").textContent = t("vaultSwitching"); $("acctInfo").style.color = "var(--dim)";
         api.vaultSwitch(a.id).then(function (res) {
-          renderVault(res && res.list); refreshAccount();
+          renderVault(res && res.list); refreshAccount(); refreshVaultUsage();
           if (res && res.r && res.r.ok === false) addLog({ line: "Switch failed: " + res.r.error });
         });
       };
-      var x = el("button", "linklike", "✕"); x.style.color = "var(--faint)";
+      var x = el("button", "linklike", "✕"); x.style.color = "var(--faint)"; x.style.marginTop = "2px";
       x.onclick = function (e) { e.stopPropagation(); if (api.vaultRemove) api.vaultRemove(a.id).then(function (res) { renderVault(res && res.list); }); };
       row.appendChild(x);
       box.appendChild(row);
     });
   }
+  function refreshVaultUsage() {
+    if (!api.vaultUsage) return;
+    api.vaultUsage().then(function (map) { _vaultUsage = map || {}; if (api.vaultList) api.vaultList().then(renderVault); });
+  }
   function refreshVault() {
     if (!api.vaultAvailable) return;
     api.vaultAvailable().then(function (av) {
       if (!av) { if ($("vaultUnavail")) $("vaultUnavail").style.display = "block"; return; }
-      if (api.vaultList) api.vaultList().then(renderVault);
+      if (api.vaultList) api.vaultList().then(function (l) { renderVault(l); refreshVaultUsage(); });
     });
   }
   if ($("vaultSaveCur")) $("vaultSaveCur").onclick = function () {

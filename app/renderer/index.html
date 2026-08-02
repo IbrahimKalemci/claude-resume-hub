@@ -116,6 +116,15 @@
   #log div{white-space:pre-wrap;word-break:break-word}
   #log .t{color:var(--faint);margin-right:6px}
 
+  /* ---------- account usage bars ---------- */
+  .uline{display:flex;align-items:center;gap:6px;font-size:9.5px;color:var(--dim);margin-top:3px}
+  .uline .ulab{width:15px;color:var(--faint);flex:none}
+  .ubar{flex:1;height:5px;border-radius:3px;background:#1c2333;overflow:hidden;min-width:40px}
+  .ufill{height:100%;border-radius:3px;transition:width .3s}
+  .uline .upct{width:30px;text-align:right;flex:none;font-variant-numeric:tabular-nums}
+  .uline .ureset{color:var(--faint);flex:none}
+  .freebadge{font-size:8.5px;font-weight:700;color:var(--ok);border:1px solid var(--ok);border-radius:999px;padding:0 5px;margin-left:6px;text-transform:uppercase;letter-spacing:.5px}
+
   /* ---------- session picker modal ---------- */
   .modal{position:fixed;inset:0;z-index:60;background:rgba(4,6,10,.66);display:none;
          align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(2px)}
