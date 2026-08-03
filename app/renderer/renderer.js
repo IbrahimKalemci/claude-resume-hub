@@ -8,6 +8,9 @@
       settings: "Settings", back: "Back", account: "Account",
       signin: "Sign in / switch account", signout: "Sign out",
       vaultAdd: "+ Add account", vaultSave: "Save current",
+      codeTitle: "Finish adding your account", codeSub: "A private window opened — sign in with the account you want, then paste the code it shows here.",
+      codePh: "paste the code here", codeSubmit: "Submit", copyLink: "copy sign-in link", codeCopied: "Link copied.",
+      codeWorking: "Signing in…", codeFail: "That didn't work — check the code and try again.", codeNoUrl: "Couldn't start sign-in. Is the claude CLI on PATH?",
       vaultHint: "Click a saved account to switch instantly — no re-login — for the CLI and your IDE at once. Tokens are stored encrypted on this PC only (Windows DPAPI, your login). Add account signs you into another one; Save current adds the one you're on now.",
       vaultUnavail: "The encrypted vault is Windows-only. On this OS use Sign out + sign in to change accounts.",
       vaultSwitching: "Switching account…", vaultAdding: "Opening Claude sign-in for the new account… finish it, I'll save it automatically.",
@@ -54,6 +57,9 @@
       settings: "Ayarlar", back: "Geri", account: "Hesap",
       signin: "Giriş yap / hesap değiştir", signout: "Çıkış yap",
       vaultAdd: "+ Hesap ekle", vaultSave: "Mevcudu kaydet",
+      codeTitle: "Hesap eklemeyi tamamla", codeSub: "Gizli bir pencere açıldı — istediğin hesapla gir, sonra gösterdiği kodu buraya yapıştır.",
+      codePh: "kodu buraya yapıştır", codeSubmit: "Gönder", copyLink: "giriş linkini kopyala", codeCopied: "Link kopyalandı.",
+      codeWorking: "Giriş yapılıyor…", codeFail: "Olmadı — kodu kontrol edip tekrar dene.", codeNoUrl: "Giriş başlatılamadı. claude CLI PATH'te mi?",
       vaultHint: "Kayıtlı bir hesaba tıkla → anında geçiş, tekrar giriş yok — hem CLI hem IDE aynı anda. Token'lar sadece bu PC'de şifreli saklanır (Windows DPAPI, senin girişin). Hesap ekle seni başka bir hesaba sokar; Mevcudu kaydet şu ankini ekler.",
       vaultUnavail: "Şifreli vault yalnızca Windows'ta. Bu OS'ta hesap değiştirmek için Çıkış yap + giriş yap.",
       vaultSwitching: "Hesap değiştiriliyor…", vaultAdding: "Yeni hesap için Claude girişi açılıyor… bitir, otomatik kaydedeceğim.",
@@ -152,7 +158,10 @@
     vaultSaveCurrent: function () { return this.vaultList().then(function (l) { return { r: { ok: true }, list: l }; }); },
     vaultSwitch: function () { return this.vaultList().then(function (l) { return { r: { ok: true }, list: l }; }); },
     vaultRemove: function () { return this.vaultList().then(function (l) { return { list: l }; }); },
-    vaultAddLogin: function () { return Promise.resolve({ ok: true }); },
+    vaultAddStart: function () { return Promise.resolve({ ok: true, url: "https://claude.com/cai/oauth/authorize?code=true&client_id=demo" }); },
+    vaultAddCode: function () { return this.vaultList().then(function (l) { return { ok: true, list: l }; }); },
+    vaultAddCancel: function () { return Promise.resolve({ ok: true }); },
+    onVaultAddUrl: function () {},
     vaultUsage: function () { return Promise.resolve({
       you_work_com: { ok: true, fiveHour: { pct: 100, resetsAt: new Date(Date.now() + 2 * 3600e3).toISOString() }, sevenDay: { pct: 42, resetsAt: new Date(Date.now() + 3 * 864e5).toISOString() } },
       you_gmail_com: { ok: true, fiveHour: { pct: 12, resetsAt: new Date(Date.now() + 1 * 3600e3).toISOString() }, sevenDay: { pct: 5, resetsAt: null } }
@@ -435,25 +444,36 @@
       if (res && res.r && res.r.ok === false) { $("acctInfo").textContent = res.r.error; $("acctInfo").style.color = "var(--warn)"; }
     });
   };
+  // Add account: no cmd window. A private browser window opens; the code is
+  // entered in the in-app bottom sheet, which feeds it to claude's stdin.
+  var _addUrl = null;
+  function closeCodePopup() { $("codePopup").classList.remove("open"); }
   if ($("vaultAdd")) $("vaultAdd").onclick = function () {
-    if (!api.vaultAddLogin) return;
-    api.vaultAddLogin();
-    $("acctInfo").textContent = t("vaultAdding"); $("acctInfo").style.color = "var(--dim)";
-    // When a DIFFERENT account becomes live (login finished), auto-save it to the vault.
-    api.getAccount().then(function (a0) {
-      var startEmail = a0 && a0.email;
-      var n = 0, iv = setInterval(function () {
-        n++;
-        api.getAccount().then(function (a) {
-          if (a && a.loggedIn && a.email && a.email !== startEmail) {
-            if (api.vaultSaveCurrent) api.vaultSaveCurrent().then(function (res) { renderVault(res && res.list); });
-            renderAccount(a); clearInterval(iv);
-          }
-        });
-        if (n >= 40) clearInterval(iv);
-      }, 3000);
+    if (!api.vaultAddStart) return;
+    _addUrl = null;
+    $("codeInput").value = ""; $("codeStatus").textContent = ""; $("codeStatus").style.color = "";
+    $("codeCopy").style.display = "none";
+    $("codePopup").classList.add("open");
+    setTimeout(function () { try { $("codeInput").focus(); } catch (e) {} }, 250);
+    api.vaultAddStart().then(function (r) {
+      if (r && r.url) { _addUrl = r.url; $("codeCopy").style.display = "inline"; }
+      else { $("codeStatus").textContent = t("codeNoUrl"); $("codeStatus").style.color = "var(--warn)"; }
     });
   };
+  if (api.onVaultAddUrl) api.onVaultAddUrl(function (u) { _addUrl = u; if ($("codeCopy")) $("codeCopy").style.display = "inline"; });
+  if ($("codeCopy")) $("codeCopy").onclick = function () { if (_addUrl) { try { navigator.clipboard.writeText(_addUrl); $("codeStatus").textContent = t("codeCopied"); } catch (e) {} } };
+  if ($("codeSubmit")) $("codeSubmit").onclick = function () {
+    var code = $("codeInput").value.trim();
+    if (!code) { try { $("codeInput").focus(); } catch (e) {} return; }
+    $("codeStatus").style.color = "var(--dim)"; $("codeStatus").textContent = t("codeWorking");
+    api.vaultAddCode(code).then(function (res) {
+      if (res && res.ok) { closeCodePopup(); refreshAccount(); refreshVaultUsage(); if (res.list) renderVault(res.list); }
+      else { $("codeStatus").style.color = "var(--err)"; $("codeStatus").textContent = (res && res.error) || t("codeFail"); }
+    });
+  };
+  if ($("codeInput")) $("codeInput").addEventListener("keydown", function (e) { if (e.key === "Enter") $("codeSubmit").click(); });
+  if ($("codeCancel")) $("codeCancel").onclick = function () { if (api.vaultAddCancel) api.vaultAddCancel(); closeCodePopup(); };
+
   $("acctLogout").onclick = function () { api.accountLogout().then(refreshAccount); };
   $("toggleList").onclick = function () {
     var l = $("slist"), open = l.style.display !== "none";

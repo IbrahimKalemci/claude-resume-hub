@@ -11,6 +11,7 @@
 const { app, BrowserWindow, Tray, Menu, ipcMain, dialog, shell, Notification, nativeImage } = require("electron");
 const path = require("path");
 const fs = require("fs");
+const { spawn } = require("child_process");
 
 const { AutoResumeEngine, probeLimit } = require("../lib/engine");
 const { listSessions, pickActiveSession, lastActiveProjectDir, sessionRecap, smartPrompt, sessionIdleMs, sessionMtimeMs, limitFromTranscript } = require("../lib/sessions");
@@ -625,11 +626,11 @@ ipcMain.handle("vaultList", () => vault.list(vaultDir()));
 ipcMain.handle("vaultSaveCurrent", () => { const r = vault.saveCurrent(vaultDir()); return { r, list: vault.list(vaultDir()) }; });
 ipcMain.handle("vaultSwitch", (_e, id) => { const r = vault.switchTo(vaultDir(), id); return { r, list: vault.list(vaultDir()) }; });
 ipcMain.handle("vaultRemove", (_e, id) => { vault.remove(vaultDir(), id); return { list: vault.list(vaultDir()) }; });
-// Write (once) a tiny launcher that opens a URL in a PRIVATE browser window, and
-// return its path. Used as claude's BROWSER for "add account" so the sign-in page
-// can't reuse your current account's cookies — forcing the account picker.
-function incognitoLauncher() {
-  if (process.platform !== "win32") return null;
+// Open a URL in a PRIVATE browser window (Chrome incognito / Edge InPrivate) so
+// the sign-in page can't reuse the current account's cookies — forcing the "which
+// account?" picker. Uses a spawn arg array (NOT a shell), so the `&` in the OAuth
+// URL is a literal argument and can't be split/truncated.
+function openIncognito(url) {
   const candidates = [
     ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "--incognito"],
     ["C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe", "--incognito"],
@@ -637,15 +638,54 @@ function incognitoLauncher() {
     ["C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe", "--inprivate"],
   ];
   const found = candidates.find(([p]) => { try { return fs.existsSync(p); } catch { return false; } });
-  if (!found) return null;
-  const [browser, flag] = found;
-  const bat = path.join(app.getPath("userData"), "incognito-login.bat");
-  try { fs.writeFileSync(bat, `@echo off\r\nstart "" "${browser}" ${flag} --new-window "%~1"\r\n`); }
-  catch { return null; }
-  return bat;
+  if (!found) return false;
+  try { spawn(found[0], [found[1], "--new-window", url], { detached: true, stdio: "ignore", windowsHide: false }).unref(); return true; }
+  catch { return false; }
 }
-// Add account = sign into a new/other account (in a private window), then save it.
-ipcMain.handle("vaultAddLogin", () => account.login(null, { browser: incognitoLauncher() }));
+// A no-op BROWSER so `claude auth login` does NOT open the default browser — we
+// open the private window ourselves from the URL we parse out of its output.
+function noopBrowser() {
+  const bat = path.join(app.getPath("userData"), "noop-browser.bat");
+  try { fs.writeFileSync(bat, "@echo off\r\n"); return bat; } catch { return ""; }
+}
+
+// --- in-app "add account" flow (no cmd window; code entered in the app) ------
+let _addChild = null, _addUrl = null;
+ipcMain.handle("vaultAddStart", () => {
+  if (_addChild) { try { _addChild.kill(); } catch { /* ignore */ } _addChild = null; }
+  _addUrl = null;
+  const env = Object.assign({}, process.env, { BROWSER: noopBrowser() });
+  const child = spawn("claude auth login", { shell: true, windowsHide: true, env, stdio: ["pipe", "pipe", "pipe"] });
+  _addChild = child;
+  let buf = "";
+  const onData = (d) => {
+    buf += d.toString();
+    if (!_addUrl) {
+      const m = buf.match(/https:\/\/claude\.com\/[^\s'"]+/);
+      if (m) { _addUrl = m[0]; openIncognito(_addUrl); send("vaultAddUrl", _addUrl); }
+    }
+  };
+  if (child.stdout) child.stdout.on("data", onData);
+  if (child.stderr) child.stderr.on("data", onData);
+  child.on("close", () => { if (_addChild === child) _addChild = null; });
+  child.on("error", () => { if (_addChild === child) _addChild = null; });
+  return new Promise((resolve) => {
+    const t = setInterval(() => { if (_addUrl) { clearInterval(t); resolve({ ok: true, url: _addUrl }); } }, 200);
+    setTimeout(() => { clearInterval(t); resolve({ ok: !!_addUrl, url: _addUrl }); }, 9000);
+  });
+});
+ipcMain.handle("vaultAddCode", async (_e, code) => {
+  if (!_addChild) return { ok: false, error: "no sign-in in progress" };
+  const child = _addChild;
+  try { child.stdin.write(String(code || "").trim() + "\n"); } catch { /* ignore */ }
+  await new Promise((r) => { let done = false; const fin = () => { if (!done) { done = true; r(); } }; child.on("close", fin); setTimeout(fin, 25000); });
+  _addChild = null;
+  const live = vault.readLive();
+  if (!live) return { ok: false, error: "sign-in didn't complete — check the code and try again" };
+  const res = vault.saveCurrent(vaultDir());
+  return { ok: !!(res && res.ok), account: res && res.meta, list: vault.list(vaultDir()) };
+});
+ipcMain.handle("vaultAddCancel", () => { if (_addChild) { try { _addChild.kill(); } catch { /* ignore */ } _addChild = null; } return { ok: true }; });
 // Live plan-usage per saved account (5h / 7d %), from Claude's own usage endpoint.
 // Cached ~5 min to respect rate limits (same idea as ClaudeSwitch's 10-min refresh).
 let _usageCache = {};

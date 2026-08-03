@@ -3,6 +3,19 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.1.2] — 2026-07-26
+
+### Fixed / changed
+- **Add account no longer opens a cmd window, and the private-window URL is no
+  longer mangled.** `claude auth login` now runs hidden; the app parses the
+  sign-in URL from its output and opens the **private window itself** with a
+  proper argument array (the previous `.bat` launcher split the URL on the `&`
+  in its query string, so the incognito window got a truncated
+  `…/authorize?code` → DNS error). You enter the code in a small **in-app bottom
+  sheet** ("paste the code here → Submit") instead of a terminal; the app feeds it
+  to the sign-in and saves the account to the vault automatically. A "copy
+  sign-in link" fallback is there if the private window didn't open.
+
 ## [2.1.1] — 2026-07-26
 
 ### Fixed
