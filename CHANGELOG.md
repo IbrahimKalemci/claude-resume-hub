@@ -3,6 +3,16 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.1.1] — 2026-07-26
+
+### Fixed
+- **"Add account" now opens a PRIVATE browser window** so it can't reuse the
+  cookies of the account you're already signed into — which was making it just
+  re-add the same account. Claude Code honours the `BROWSER` env var, so we point
+  it at a tiny launcher that opens the sign-in URL in Chrome `--incognito`
+  (or Edge `--inprivate`); the default browser no longer opens at all, and
+  Anthropic's page shows the "which account?" picker. Windows.
+
 ## [2.1.0] — 2026-07-26
 
 ### Added

@@ -625,8 +625,27 @@ ipcMain.handle("vaultList", () => vault.list(vaultDir()));
 ipcMain.handle("vaultSaveCurrent", () => { const r = vault.saveCurrent(vaultDir()); return { r, list: vault.list(vaultDir()) }; });
 ipcMain.handle("vaultSwitch", (_e, id) => { const r = vault.switchTo(vaultDir(), id); return { r, list: vault.list(vaultDir()) }; });
 ipcMain.handle("vaultRemove", (_e, id) => { vault.remove(vaultDir(), id); return { list: vault.list(vaultDir()) }; });
-// Add account = sign into a new/other account, then it can be saved to the vault.
-ipcMain.handle("vaultAddLogin", () => account.login());
+// Write (once) a tiny launcher that opens a URL in a PRIVATE browser window, and
+// return its path. Used as claude's BROWSER for "add account" so the sign-in page
+// can't reuse your current account's cookies — forcing the account picker.
+function incognitoLauncher() {
+  if (process.platform !== "win32") return null;
+  const candidates = [
+    ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "--incognito"],
+    ["C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe", "--incognito"],
+    ["C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe", "--inprivate"],
+    ["C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe", "--inprivate"],
+  ];
+  const found = candidates.find(([p]) => { try { return fs.existsSync(p); } catch { return false; } });
+  if (!found) return null;
+  const [browser, flag] = found;
+  const bat = path.join(app.getPath("userData"), "incognito-login.bat");
+  try { fs.writeFileSync(bat, `@echo off\r\nstart "" "${browser}" ${flag} --new-window "%~1"\r\n`); }
+  catch { return null; }
+  return bat;
+}
+// Add account = sign into a new/other account (in a private window), then save it.
+ipcMain.handle("vaultAddLogin", () => account.login(null, { browser: incognitoLauncher() }));
 // Live plan-usage per saved account (5h / 7d %), from Claude's own usage endpoint.
 // Cached ~5 min to respect rate limits (same idea as ClaudeSwitch's 10-min refresh).
 let _usageCache = {};
