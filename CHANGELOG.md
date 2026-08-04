@@ -3,6 +3,19 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.1.4] — 2026-07-26
+
+### Fixed
+- **Switch no longer disrupts `~/.claude.json` (the likely cause of the IDE
+  re-login).** We were parsing and fully rewriting that 56-key file (reformatting
+  every byte), which races with the IDE's own frequent writes to it and can make
+  the IDE re-authenticate. Now we splice **only** the `userID` and `oauthAccount`
+  member spans and leave every other byte untouched — ClaudeSwitch's "JsonSurgeon"
+  approach — with a JSON-validity check + safe fallback. Verified on the real
+  56-key file: only those two members change, all others stay byte-identical.
+  Combined with 2.1.3's token refresh, this matches ClaudeSwitch's mechanism, so
+  you should be able to switch and keep typing in the same session.
+
 ## [2.1.3] — 2026-07-26
 
 ### Fixed

@@ -8,6 +8,7 @@ const { encodeDir, listSessions, lastAssistantText, pickActiveSession, smartProm
 const { PS_SCRIPT, startTray } = require("../lib/tray.js");
 const statsLib = require("../lib/stats.js");
 const usageLib = require("../lib/usage.js");
+const vaultLib = require("../lib/vault.js");
 const os = require("node:os");
 const fs = require("node:fs");
 
@@ -233,6 +234,24 @@ test("recentSessions: returns at most N resumable sessions with dir + project", 
     assert.equal(typeof s.project, "string");
     assert.ok(s.mtime instanceof Date);
   }
+});
+
+test("vault.spliceMember: replaces only the target member, byte-for-byte elsewhere", () => {
+  const src = '{\n  "a": 1,\n  "userID": "OLD",\n  "oauthAccount": {"emailAddress":"a@x.com","org":{"n":1}},\n  "z": "keep\\"me",\n  "projects": {"p": {"deep": [1,2,{"x":"}"}]}}\n}\n';
+  // string member
+  let out = vaultLib.spliceMember(src, "userID", JSON.stringify("NEW"));
+  assert.ok(out.includes('"userID": "NEW"'));
+  assert.ok(out.includes('"z": "keep\\"me"'));            // untouched, escaped-quote preserved
+  assert.ok(out.includes('"projects"'));                  // untouched
+  assert.equal(JSON.parse(out).userID, "NEW");
+  // object member with nested braces + a "}" inside a string
+  out = vaultLib.spliceMember(src, "oauthAccount", JSON.stringify({ emailAddress: "b@y.com" }));
+  const parsed = JSON.parse(out);
+  assert.equal(parsed.oauthAccount.emailAddress, "b@y.com");
+  assert.equal(parsed.projects.p.deep[2].x, "}");          // nested "}" in string didn't fool the scanner
+  assert.equal(parsed.a, 1);
+  // missing member → null (caller falls back)
+  assert.equal(vaultLib.spliceMember(src, "nope", '"x"'), null);
 });
 
 test("usage: entryTokens separates cache-read from the new-token total", () => {
