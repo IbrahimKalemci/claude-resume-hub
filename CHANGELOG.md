@@ -3,6 +3,16 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.1.3] — 2026-07-26
+
+### Fixed
+- **Switching to an account with a stale token no longer forces a re-login.** The
+  vault now nudges Claude's own refresh flow right after a switch (a quick
+  background `claude -p ok` in a temp dir), so the live `.credentials.json` ends
+  up with a fresh, valid access token the CLI and IDE can use immediately —
+  instead of the IDE seeing an expired token and prompting sign-in. (Access
+  tokens live ~8h; the refresh token ~1 month, so this covers the common case.)
+
 ## [2.1.2] — 2026-07-26
 
 ### Fixed / changed

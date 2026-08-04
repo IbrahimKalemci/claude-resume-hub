@@ -11,6 +11,7 @@
 const { app, BrowserWindow, Tray, Menu, ipcMain, dialog, shell, Notification, nativeImage } = require("electron");
 const path = require("path");
 const fs = require("fs");
+const os = require("os");
 const { spawn } = require("child_process");
 
 const { AutoResumeEngine, probeLimit } = require("../lib/engine");
@@ -624,7 +625,16 @@ function vaultDir() { return path.join(app.getPath("userData"), "vault"); }
 ipcMain.handle("vaultAvailable", () => vault.available());
 ipcMain.handle("vaultList", () => vault.list(vaultDir()));
 ipcMain.handle("vaultSaveCurrent", () => { const r = vault.saveCurrent(vaultDir()); return { r, list: vault.list(vaultDir()) }; });
-ipcMain.handle("vaultSwitch", (_e, id) => { const r = vault.switchTo(vaultDir(), id); return { r, list: vault.list(vaultDir()) }; });
+ipcMain.handle("vaultSwitch", (_e, id) => {
+  const r = vault.switchTo(vaultDir(), id);
+  if (r && r.ok) {
+    // Nudge Claude to refresh the (possibly stale) access token right away, using
+    // its OWN refresh flow, so the CLI + IDE get a fresh valid token and don't
+    // prompt a re-login. Fire-and-forget in a temp cwd (no session pollution).
+    try { spawn("claude -p \"ok\"", { cwd: os.tmpdir(), shell: true, windowsHide: true, detached: true, stdio: "ignore" }).unref(); } catch { /* ignore */ }
+  }
+  return { r, list: vault.list(vaultDir()) };
+});
 ipcMain.handle("vaultRemove", (_e, id) => { vault.remove(vaultDir(), id); return { list: vault.list(vaultDir()) }; });
 // Open a URL in a PRIVATE browser window (Chrome incognito / Edge InPrivate) so
 // the sign-in page can't reuse the current account's cookies — forcing the "which
