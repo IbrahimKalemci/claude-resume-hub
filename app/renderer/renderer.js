@@ -14,6 +14,7 @@
       vaultHint: "Click a saved account to switch instantly — no re-login — for the CLI and your IDE at once. Tokens are stored encrypted on this PC only (Windows DPAPI, your login). Add account signs you into another one; Save current adds the one you're on now.",
       vaultUnavail: "The encrypted vault is Windows-only. On this OS use Sign out + sign in to change accounts.",
       vaultSwitching: "Switching account…", vaultAdding: "Opening Claude sign-in for the new account… finish it, I'll save it automatically.",
+      switchStale: "Switched, but Claude isn't cleanly logged in — this account's saved login likely expired (or another Claude window is running). Close other Claude/IDE windows, then re-add this account with + Add account.",
       mostFree: "most free", tokenExpired: "switch to refresh",
       rotate: "Rotate accounts when limited · experimental", addAccount2: "+ Add rotation account",
       rotateHint: "For NEW tasks across your own separate accounts, so an overnight run can switch when one hits its limit. Each is a separate local config (its own sessions); doesn't change your IDE. A specific-session resume stays on its account.",
@@ -63,6 +64,7 @@
       vaultHint: "Kayıtlı bir hesaba tıkla → anında geçiş, tekrar giriş yok — hem CLI hem IDE aynı anda. Token'lar sadece bu PC'de şifreli saklanır (Windows DPAPI, senin girişin). Hesap ekle seni başka bir hesaba sokar; Mevcudu kaydet şu ankini ekler.",
       vaultUnavail: "Şifreli vault yalnızca Windows'ta. Bu OS'ta hesap değiştirmek için Çıkış yap + giriş yap.",
       vaultSwitching: "Hesap değiştiriliyor…", vaultAdding: "Yeni hesap için Claude girişi açılıyor… bitir, otomatik kaydedeceğim.",
+      switchStale: "Geçildi ama Claude temiz girişli değil — bu hesabın kayıtlı girişi büyük ihtimalle süresi geçmiş (ya da başka bir Claude penceresi açık). Diğer Claude/IDE pencerelerini kapat, sonra bu hesabı + Hesap ekle ile yeniden ekle.",
       mostFree: "en boş", tokenExpired: "yenilemek için geç",
       rotate: "Limit dolunca hesap değiştir · deneysel", addAccount2: "+ Rotasyon hesabı ekle",
       rotateHint: "KENDİ ayrı hesapların arasında YENİ görevler için — gece çalışması biri limite düşünce diğerine geçsin. Her biri ayrı yerel config (kendi oturumları); IDE'ni değiştirmez. Belirli bir oturum devam ederken kendi hesabında kalır.",
@@ -417,7 +419,11 @@
         $("acctInfo").textContent = t("vaultSwitching"); $("acctInfo").style.color = "var(--dim)";
         api.vaultSwitch(a.id).then(function (res) {
           renderVault(res && res.list); refreshAccount(); refreshVaultUsage();
-          if (res && res.r && res.r.ok === false) addLog({ line: "Switch failed: " + res.r.error });
+          if (res && res.r && res.r.ok === false) { $("acctInfo").textContent = "Switch failed: " + res.r.error; $("acctInfo").style.color = "var(--err)"; return; }
+          // Honest verification: did we land cleanly logged in as this account?
+          if (res && res.verified && !res.verified.ok) {
+            $("acctInfo").textContent = t("switchStale"); $("acctInfo").style.color = "var(--warn)";
+          }
         });
       };
       var x = el("button", "linklike", "✕"); x.style.color = "var(--faint)"; x.style.marginTop = "2px";
@@ -461,6 +467,7 @@
     });
   };
   if (api.onVaultAddUrl) api.onVaultAddUrl(function (u) { _addUrl = u; if ($("codeCopy")) $("codeCopy").style.display = "inline"; });
+  if (api.onAccountsRefreshed) api.onAccountsRefreshed(function () { refreshVault(); });
   if ($("codeCopy")) $("codeCopy").onclick = function () { if (_addUrl) { try { navigator.clipboard.writeText(_addUrl); $("codeStatus").textContent = t("codeCopied"); } catch (e) {} } };
   if ($("codeSubmit")) $("codeSubmit").onclick = function () {
     var code = $("codeInput").value.trim();

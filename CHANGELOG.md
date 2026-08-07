@@ -3,6 +3,27 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.2.0] — 2026-08-08
+
+### Fixed — account switch now actually works (the real root cause)
+- **Stored tokens were going stale, so switching landed logged-out** (and the IDE
+  then demanded a re-login). Root cause: Claude's refresh tokens are **one-time
+  use** — each refresh rotates the refresh token and kills the old one — so a
+  set-once vault snapshot dies. Now, exactly like ClaudeSwitch:
+  - `lib/oauth.js` refreshes tokens via Claude's own endpoint
+    (`console.anthropic.com/v1/oauth/token`) and **persists the rotated refresh
+    token** back to the vault.
+  - **On switch:** the account we're leaving is re-snapshotted from the live files
+    (keeps its fresh token), the target is **refreshed right before** it's written
+    live, then the result is **verified** (`claude auth status`) — if it didn't land
+    cleanly logged in, you're told to re-add that account instead of being left
+    in a broken state.
+  - **Every 10 min**, inactive vault accounts are refreshed in the background
+    (rotate + persist) so they stay switch-able; the active account is left to the
+    live CLI/IDE.
+- Removed the blind post-switch `claude -p ok` nudge, which could corrupt creds
+  when a refresh failed.
+
 ## [2.1.4] — 2026-07-26
 
 ### Fixed

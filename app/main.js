@@ -625,15 +625,32 @@ function vaultDir() { return path.join(app.getPath("userData"), "vault"); }
 ipcMain.handle("vaultAvailable", () => vault.available());
 ipcMain.handle("vaultList", () => vault.list(vaultDir()));
 ipcMain.handle("vaultSaveCurrent", () => { const r = vault.saveCurrent(vaultDir()); return { r, list: vault.list(vaultDir()) }; });
-ipcMain.handle("vaultSwitch", (_e, id) => {
-  const r = vault.switchTo(vaultDir(), id);
+ipcMain.handle("vaultSwitch", async (_e, id) => {
+  const dir = vaultDir();
+  // 1) Preserve the account we're LEAVING: re-snapshot it from the live files so
+  //    the vault keeps its current (freshly-rotated) tokens — else switching back
+  //    later would use a stale/dead refresh token. Only if it's already saved.
+  try {
+    const live = vault.readLive();
+    if (live && live.email && vault.list(dir).some((a) => a.email === live.email && a.id !== id)) vault.saveCurrent(dir);
+  } catch { /* ignore */ }
+  // 2) Freshen the TARGET's token right before writing it live (rotate + persist),
+  //    so we never write a stale/expired token that forces a re-login.
+  let refreshed = { ok: true };
+  try { refreshed = await vault.refreshStored(dir, id); } catch { refreshed = { ok: false }; }
+  // 3) Write the target (now fresh) into the live files.
+  const r = vault.switchTo(dir, id);
+  // 4) Verify we landed cleanly logged in as the target; report honestly if not.
+  let verified = null;
   if (r && r.ok) {
-    // Nudge Claude to refresh the (possibly stale) access token right away, using
-    // its OWN refresh flow, so the CLI + IDE get a fresh valid token and don't
-    // prompt a re-login. Fire-and-forget in a temp cwd (no session pollution).
-    try { spawn("claude -p \"ok\"", { cwd: os.tmpdir(), shell: true, windowsHide: true, detached: true, stdio: "ignore" }).unref(); } catch { /* ignore */ }
+    const meta = (vault.list(dir).find((a) => a.id === id)) || {};
+    try {
+      const st = await account.status();
+      verified = { loggedIn: !!st.loggedIn, email: st.email || null, expected: meta.email || null,
+        ok: !!(st.loggedIn && (!meta.email || st.email === meta.email)), refreshInvalid: !!refreshed.invalid };
+    } catch { verified = { loggedIn: false, ok: false, expected: meta.email || null, refreshInvalid: !!refreshed.invalid }; }
   }
-  return { r, list: vault.list(vaultDir()) };
+  return { r, verified, list: vault.list(dir) };
 });
 ipcMain.handle("vaultRemove", (_e, id) => { vault.remove(vaultDir(), id); return { list: vault.list(vaultDir()) }; });
 // Open a URL in a PRIVATE browser window (Chrome incognito / Edge InPrivate) so
@@ -779,6 +796,26 @@ if (!app.requestSingleInstanceLock()) {
     });
 
     app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); else showWindow(); });
+
+    // Keep vaulted accounts switch-able: every 10 min, refresh each INACTIVE
+    // account's token (rotate + persist), like ClaudeSwitch. The ACTIVE account is
+    // left alone — the live CLI/IDE owns and rotates its token. Without this, a
+    // stored token eventually can't mint a valid session and switching to it lands
+    // logged-out. Runs quietly in the background; failures are per-account.
+    const refreshInactive = async () => {
+      try {
+        if (!vault.available()) return;
+        const live = vault.readLive();
+        const activeEmail = live && live.email;
+        for (const a of vault.list(vaultDir())) {
+          if (a.email && a.email === activeEmail) continue; // skip the active one
+          try { await vault.refreshStored(vaultDir(), a.id); } catch { /* per-account */ }
+        }
+        send("accounts-refreshed", true);
+      } catch { /* ignore */ }
+    };
+    setTimeout(refreshInactive, 20000);            // once shortly after launch
+    setInterval(refreshInactive, 10 * 60 * 1000);  // then every 10 minutes
   });
 
   // Background app: don't quit when the window is closed.

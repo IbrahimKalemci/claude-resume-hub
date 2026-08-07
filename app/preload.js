@@ -36,6 +36,7 @@ contextBridge.exposeInMainWorld("api", {
   vaultAddCancel: () => ipcRenderer.invoke("vaultAddCancel"),
   onVaultAddUrl: (cb) => ipcRenderer.on("vaultAddUrl", (_e, u) => cb(u)),
   vaultUsage: () => ipcRenderer.invoke("vaultUsage"),
+  onAccountsRefreshed: (cb) => ipcRenderer.on("accounts-refreshed", () => cb()),
 
   // multi-account
   getAccounts: () => ipcRenderer.invoke("getAccounts"),
